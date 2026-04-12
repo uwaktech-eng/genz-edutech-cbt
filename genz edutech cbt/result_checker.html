@@ -4,6 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>CBT Result Checker</title>
+<script>
+(function(){
+  try{
+    if(window.top !== window.self){
+      document.documentElement.style.display = 'none';
+      window.top.location = window.self.location.href;
+    }
+  }catch(err){
+    try{ window.location = window.self.location.href; }catch(e){}
+  }
+})();
+</script>
 <link id="siteFavicon" rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%23081224%22/%3E%3Ctext x=%2250%25%22 y=%2254%25%22 font-size=%2232%22 text-anchor=%22middle%22 fill=%22%23facc15%22 font-family=%22Arial%22 dy=%22.1em%22%3EG%3C/text%3E%3C/svg%3E">
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
@@ -62,7 +74,7 @@ button.light{background:#fff;color:#0f172a;border:1px solid #cbd5e1;box-shadow:n
 .results-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .table-wrap{overflow:auto;border:1.5px solid #cbd5e1;border-radius:18px;background:#fff}
 .table-wrap table{width:100%;border-collapse:collapse;min-width:760px;background:#fff;border:1.5px solid #cbd5e1;box-shadow:0 10px 30px rgba(15,23,42,.06);border-radius:18px;overflow:hidden}
-.table-wrap th,.table-wrap td{padding:13px 12px;border-bottom:1px solid #dbe4f3;text-align:left;font-size:14px;vertical-align:top}
+.table-wrap th,.table-wrap td{padding:13px 12px;border-bottom:1px solid #dbe4f3;text-align:left;font-size:14px;vertical-align:top;overflow-wrap:anywhere;word-break:break-word}
 .table-wrap th{background:#eaf2ff;color:#1e3a8a;font-size:12px;text-transform:uppercase;letter-spacing:.35px;border-bottom:1.5px solid #bfd3f7}
 .table-wrap tr:hover td{background:#f8fbff}
 .state-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 11px;border-radius:999px;font-weight:800;font-size:12px}
@@ -75,7 +87,9 @@ button.light{background:#fff;color:#0f172a;border:1px solid #cbd5e1;box-shadow:n
 .result-header:after{content:"";position:absolute;inset:auto -8% -48px auto;width:240px;height:120px;background:radial-gradient(circle, rgba(255,255,255,.24), transparent 70%)}
 .result-header-row{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap}
 .brand-stack{display:flex;gap:16px;align-items:flex-start}
+.brand-logo-shell{position:relative;width:84px;height:84px;flex:0 0 84px}
 .brand-logo{width:84px;height:84px;border-radius:22px;object-fit:cover;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22)}
+.brand-logo-fallback{display:grid;place-items:center;width:84px;height:84px;border-radius:22px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);font-weight:900;font-size:1.2rem;letter-spacing:.08em;color:#fff;text-transform:uppercase}
 .result-header h2{margin:0;font-size:1.55rem;line-height:1.08}
 .result-sub{margin-top:6px;opacity:.95;line-height:1.6}
 .result-meta-badges{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
@@ -85,17 +99,40 @@ button.light{background:#fff;color:#0f172a;border:1px solid #cbd5e1;box-shadow:n
 .summary-card{background:#fff;border:1.5px solid var(--theme-card-border,#dbe4f3);box-shadow:0 14px 26px rgba(15,23,42,.08);border-radius:18px;padding:15px}
 .summary-card .k{font-size:12px;text-transform:uppercase;letter-spacing:.35px;color:#64748b;font-weight:800}
 .summary-card .v{font-weight:900;font-size:1.2rem;margin-top:6px;color:#0f172a}
+.summary-card .v,.remark-box,.result-sub,.signature-line{overflow-wrap:anywhere;word-break:break-word}
 .identity-band{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:18px;align-items:start;margin-bottom:18px}
-.passport-card{background:#fff;border:1.5px solid #cbd5e1;border-radius:18px;padding:10px;box-shadow:0 8px 18px rgba(15,23,42,.06)}
-.passport-card img{width:100%;height:128px;object-fit:cover;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0}
-.passport-card .cap{text-align:center;font-size:12px;font-weight:800;color:#475569;margin-top:8px}
+.result-content-grid{display:grid;grid-template-columns:minmax(0,1fr) 190px;gap:18px;align-items:start;margin-bottom:18px}
+.result-main-stack{display:grid;gap:18px}
+.passport-card{background:#fff;border:1.5px solid #cbd5e1;border-radius:20px;padding:12px;box-shadow:0 12px 26px rgba(15,23,42,.08);overflow:hidden}
+.passport-frame{position:relative;border-radius:16px;overflow:hidden;background:linear-gradient(180deg,#f8fbff,#eef4ff);border:1px solid #dbe4f3;min-height:214px;display:grid;place-items:center}
+.passport-card img{width:100%;height:214px;object-fit:cover;border-radius:16px;background:#f8fafc;border:1px solid #e2e8f0}
+.passport-fallback{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:18px;color:#475569;background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(239,246,255,.95))}
+.passport-fallback strong{display:block;font-size:1.05rem;color:#0f172a;margin-top:4px}
+.passport-card .cap{text-align:center;font-size:12px;font-weight:800;color:#475569;margin-top:10px;text-transform:uppercase;letter-spacing:.08em}
+.passport-meta{display:grid;gap:10px;margin-top:12px}
+.passport-meta .meta-item{background:#f8fbff;border:1px solid #dbe4f3;border-radius:14px;padding:10px 12px}
+.passport-meta .meta-item span{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:4px}
+.passport-meta .meta-item b{display:block;font-size:13px;color:#0f172a;overflow-wrap:anywhere;word-break:break-word}
 .sheet-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:18px}
 .panel{background:var(--theme-panel,#fff);border:1.5px solid var(--theme-panel-border,#cbd5e1);border-radius:20px;padding:18px;box-shadow:0 10px 22px rgba(15,23,42,.05)}
-.panel h3{margin:0 0 12px;font-size:1rem}
+.panel h3{margin:0;font-size:1rem}
+.panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.panel-chip{display:inline-flex;align-items:center;gap:6px;padding:8px 11px;border-radius:999px;font-size:12px;font-weight:800;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8}
+.panel-chip.pass{background:#dcfce7;border-color:#bbf7d0;color:#166534}
+.panel-chip.fail{background:#fee2e2;border-color:#fecaca;color:#b91c1c}
+.student-banner{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin:0 0 14px;padding:14px 16px;border-radius:18px;background:linear-gradient(135deg,rgba(59,130,246,.08),rgba(14,165,233,.05));border:1px solid #dbeafe}
+.student-banner .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:800;margin-bottom:5px}
+.student-banner .name{font-size:1.2rem;font-weight:900;color:#0f172a;line-height:1.2;overflow-wrap:anywhere;word-break:break-word}
+.student-pill-stack{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.student-pill{display:inline-flex;align-items:center;gap:6px;padding:9px 12px;border-radius:999px;background:#fff;border:1px solid #cfe0fb;color:#1e3a8a;font-weight:800;font-size:12px;max-width:100%;overflow-wrap:anywhere;word-break:break-word}
+.student-pill span{color:#64748b;font-weight:800}
 .result-table{width:100%;border-collapse:collapse;table-layout:fixed}
-.result-table th,.result-table td{border:2px solid var(--theme-table-line,#64748b);padding:12px 11px;font-size:14px}
-.result-table th{width:34%;background:var(--theme-table-head,#e2e8f0);color:var(--theme-table-head-text,#0f172a);font-weight:800;text-transform:uppercase;font-size:12px;letter-spacing:.32px}
-.result-table td{background:var(--theme-table-body,#fff);font-weight:700;color:#0f172a} .selected-row{background:rgba(59,130,246,.06)} .selection-chip{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:#eef4ff;border:1px solid #bfdbfe;color:#1d4ed8;font-weight:800;font-size:12px}
+.result-table th,.result-table td{border:2px solid var(--theme-table-line,#64748b);padding:12px 11px;font-size:14px;overflow-wrap:anywhere;word-break:break-word;vertical-align:top}
+.result-table th{width:31%;background:var(--theme-table-head,#e2e8f0);color:var(--theme-table-head-text,#0f172a);font-weight:800;text-transform:uppercase;font-size:12px;letter-spacing:.32px}
+.result-table td{background:var(--theme-table-body,#fff);font-weight:700;color:#0f172a}
+.result-table tr:nth-child(even) td{background:rgba(248,250,252,.96)}
+.result-table tr:nth-child(even) th{filter:brightness(.985)}
+.selected-row{background:rgba(59,130,246,.06)} .selection-chip{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:#eef4ff;border:1px solid #bfdbfe;color:#1d4ed8;font-weight:800;font-size:12px}
 .performance-table th:nth-child(1){width:34%}
 .performance-table th:nth-child(3){width:22%}
 .remark-box{margin-top:18px;padding:18px;border-radius:18px;background:var(--theme-remark,#eff6ff);border:1.5px solid var(--theme-card-border,#cbd5e1);color:#0f172a;line-height:1.75}
@@ -108,8 +145,8 @@ button.light{background:#fff;color:#0f172a;border:1px solid #cbd5e1;box-shadow:n
 .pass{color:#166534;font-weight:800}.fail{color:#b91c1c;font-weight:800}
 .question-image{max-width:100%;width:auto;max-height:280px;border:1px solid #dbe4f3;border-radius:12px;display:block;margin:12px auto;background:#fff}
 .empty{padding:20px;text-align:center;color:#64748b;border:1px dashed #cbd5e1;border-radius:16px;background:#f8fbff}
-@media (max-width:1080px){.layout{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.summary-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.sheet-grid{grid-template-columns:1fr}.identity-band{grid-template-columns:1fr}.passport-card{max-width:160px}}
-@media (max-width:720px){.container{padding:0 12px 28px}.hero-title{font-size:1.55rem}.hero-panel,.hero-side,.card{padding:16px}.summary-strip{grid-template-columns:1fr}.result-header{padding:22px 18px}.result-body{padding:16px}.brand-logo{width:68px;height:68px}.result-header h2{font-size:1.18rem}.table-wrap table{min-width:620px}.actions{flex-direction:column}.actions>*{width:100%}.sheet-grid{gap:12px}.result-table th,.result-table td{padding:10px 8px;font-size:13px}}
+@media (max-width:1080px){.layout{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.summary-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.sheet-grid{grid-template-columns:1fr}.identity-band{grid-template-columns:1fr}.result-content-grid{grid-template-columns:1fr}.passport-card{max-width:220px}.student-pill-stack{justify-content:flex-start}}
+@media (max-width:720px){.container{padding:0 12px 28px}.hero-title{font-size:1.55rem}.hero-panel,.hero-side,.card{padding:16px}.summary-strip{grid-template-columns:1fr}.result-header{padding:22px 18px}.result-body{padding:16px}.brand-logo-shell,.brand-logo,.brand-logo-fallback{width:68px;height:68px;border-radius:18px}.result-header h2{font-size:1.18rem}.table-wrap table{min-width:620px}.actions{flex-direction:column}.actions>*{width:100%}.sheet-grid{gap:12px}.result-table th,.result-table td{padding:10px 8px;font-size:13px}.student-banner{padding:12px}.student-pill-stack{justify-content:flex-start}.passport-card{max-width:none}.passport-card img,.passport-frame{min-height:180px;height:180px}}
 @page{size:A4;margin:12mm;} @media print{html,body,#resultBox,#resultBox *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;forced-color-adjust:none !important}body{background:#fff}header,.hero,aside.card,.results-head,.results-toolbar,.table-wrap,#reviewWrap{display:none !important}.container{max-width:none;margin:0;padding:0}.layout{display:block}.results-card{box-shadow:none;border:none;background:#fff}.results-body{padding:0}#resultCard{display:block !important}#resultBox .template-shell{box-shadow:none;border:1.5px solid var(--theme-border,#cbd5e1) !important;border-radius:0;background:var(--theme-paper,#fff) !important}#resultBox .result-header{background:var(--theme-header,linear-gradient(135deg,#1d4ed8,#4338ca 60%, #0ea5e9)) !important;color:#fff !important}#resultBox .result-body{background:linear-gradient(180deg,var(--theme-body,#fff),#ffffff) !important}#resultBox .summary-card{background:#fff !important;border-color:var(--theme-card-border,#dbe4f3) !important}#resultBox .panel{background:var(--theme-panel,#fff) !important;border-color:var(--theme-panel-border,#cbd5e1) !important}#resultBox .remark-box{background:var(--theme-remark,#eff6ff) !important;border-color:var(--theme-card-border,#cbd5e1) !important}#resultBox .result-table th{background:var(--theme-table-head,#e2e8f0) !important;color:var(--theme-table-head-text,#0f172a) !important;border-color:var(--theme-table-line,#64748b) !important}#resultBox .result-table td{background:var(--theme-table-body,#fff) !important;border-color:var(--theme-table-line,#64748b) !important}}
 </style>
 </head>
@@ -239,8 +276,8 @@ button.light{background:#fff;color:#0f172a;border:1px solid #cbd5e1;box-shadow:n
 </div>
 
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz55gzn_mfabvr7oD79sh6GcLZxuu7ByffV6nN5DzM42Ny9recRdW6u07cazPjDfTXbGQ/exec";
-async function loadSiteFavicon(){ try{ const u=new URL(APPS_SCRIPT_URL); u.searchParams.set('action','getPublicSiteContent'); u.searchParams.set('_ts',Date.now()); const res=await fetch(u.toString()); const json=await res.json(); const url=json && json.data && (json.data.siteFaviconUrl || json.data.resultBrandLogoUrl); if(url && document.getElementById('siteFavicon')) document.getElementById('siteFavicon').href=url; }catch(err){} }
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGWwOrSMSieQ56AXszY_5RjO88ETNBqgIGaorpWfEEAUJ8g1GOBxtnH3LWl6SyVAUh/exec";
+async function loadSiteFavicon(){ try{ const u=new URL(APPS_SCRIPT_URL); u.searchParams.set('action','getPublicSiteContent'); u.searchParams.set('_ts',Date.now()); const res=await fetch(u.toString()); const json=await res.json(); const url=json && json.data && (json.data.siteFaviconUrl || json.data.resultBrandLogoUrl); if(url && document.getElementById('siteFavicon')) document.getElementById('siteFavicon').href=normalizeImageUrl(url); }catch(err){} }
 const $ = id => document.getElementById(id);
 const state = { publishedResults: [], currentResult: null, selectedPublishedIds: new Set(), currentResultId: '' };
 const TEMPLATE_THEMES = {
@@ -267,17 +304,102 @@ function titleCase(s){ return String(s || '').replace(/[_-]+/g,' ').replace(/\b\
 function normalizeImageUrl(url){
   url = String(url || '').trim();
   if(!url) return '';
-  const idPatterns = [
-    /[?&]id=([a-zA-Z0-9_-]+)/,
-    /\/file\/d\/([a-zA-Z0-9_-]+)/,
-    /\/open\?id=([a-zA-Z0-9_-]+)/,
-    /\/uc\?(?:export=(?:view|download)&)?id=([a-zA-Z0-9_-]+)/,
-    /\/thumbnail\?[^#]*id=([a-zA-Z0-9_-]+)/
-  ];
-  if(/drive\.google\.com/.test(url)){
-    for(const re of idPatterns){ const m = url.match(re); if(m && m[1]) return `https://drive.google.com/uc?export=view&id=${m[1]}`; }
+  let wrapped = url.match(/<img[^>]*src\s*=\s*(["'])(.*?)\1/i);
+  if(!wrapped) wrapped = url.match(/<img[^>]*src\s*=\s*([^\s>]+)/i);
+  if(wrapped) url = String(wrapped[2] || wrapped[1] || '').trim();
+  const cssUrl = url.match(/url\(\s*(["']?)(.*?)\1\s*\)/i);
+  if(cssUrl && cssUrl[2]) url = String(cssUrl[2]).trim();
+  if(!url) return '';
+  const driveId = extractDriveImageId(url);
+  if(driveId) return `https://drive.google.com/thumbnail?id=${driveId}&sz=w2000`;
+  if(/dropbox\.com/i.test(url)){
+    let next = url.replace(/\?dl=0$/i,'?raw=1').replace(/\?dl=1$/i,'?raw=1');
+    if(!/[?&]raw=1/i.test(next)) next += (next.includes('?') ? '&' : '?') + 'raw=1';
+    return next;
   }
+  const gh = url.match(/^https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)$/i);
+  if(gh) return `https://raw.githubusercontent.com/${gh[1]}/${gh[2]}/${gh[3]}/${gh[4]}`;
   return url;
+}
+function extractDriveImageId(url){
+  const raw = String(url || '').trim();
+  if(!raw) return '';
+  const patterns = [
+    /drive\.google\.com\/file\/d\/([^\/]+)/i,
+    /drive\.google\.com\/open\?id=([^&]+)/i,
+    /[?&]id=([A-Za-z0-9_-]+)/i,
+    /uc\?(?:export=(?:view|download)&)?id=([A-Za-z0-9_-]+)/i,
+    /thumbnail\?[^#]*id=([A-Za-z0-9_-]+)/i,
+    /drive\.usercontent\.google\.com\/(?:download|u\/\d+\/uc)\?[^#]*id=([A-Za-z0-9_-]+)/i
+  ];
+  for(const re of patterns){
+    const m = raw.match(re);
+    if(m && m[1]) return m[1];
+  }
+  if(/^[A-Za-z0-9_-]{20,}$/.test(raw)) return raw;
+  return '';
+}
+function publicImageCandidates(url){
+  const raw = String(url || '').trim();
+  if(!raw) return [];
+  const out = [];
+  const push = value => { const next = String(value || '').trim(); if(next && !out.includes(next)) out.push(next); };
+  push(normalizeImageUrl(raw));
+  const driveId = extractDriveImageId(raw);
+  if(driveId){
+    push(`https://drive.google.com/thumbnail?id=${driveId}&sz=w2000`);
+    push(`https://drive.google.com/uc?export=view&id=${driveId}`);
+    push(`https://drive.google.com/uc?id=${driveId}`);
+    push(`https://drive.usercontent.google.com/download?id=${driveId}&export=view&authuser=0`);
+  }
+  return out;
+}
+function initialsFromText(value){
+  const bits = String(value || '').trim().split(/\s+/).filter(Boolean).slice(0,2);
+  return bits.map(v => v.charAt(0).toUpperCase()).join('') || 'GE';
+}
+function bindResultImage(img, url, options={}){
+  if(!img) return;
+  const candidates = publicImageCandidates(url);
+  const fallback = options.fallback || null;
+  const wrapper = options.wrapper || null;
+  const hideWrapperOnFail = !!options.hideWrapperOnFail;
+  const showFallback = () => {
+    if(img){ img.style.display = 'none'; img.removeAttribute('src'); }
+    if(fallback) fallback.style.display = 'grid';
+    if(wrapper && hideWrapperOnFail) wrapper.style.display = 'none';
+  };
+  if(!candidates.length){ showFallback(); return; }
+  let index = 0;
+  const tryNext = () => {
+    if(index >= candidates.length){ showFallback(); return; }
+    const nextSrc = candidates[index++];
+    if(wrapper) wrapper.style.display = '';
+    img.onerror = tryNext;
+    img.onload = function(){
+      this.style.display = 'block';
+      if(fallback) fallback.style.display = 'none';
+      if(wrapper) wrapper.style.display = '';
+    };
+    img.src = nextSrc;
+    img.style.display = 'block';
+  };
+  tryNext();
+}
+function bindResultMedia(root, data){
+  if(!root || !data) return;
+  root.querySelectorAll('[data-image-source]').forEach(node => {
+    const src = node.getAttribute('data-image-source') || '';
+    if(node.matches('[data-role="result-brand-logo"]')){
+      bindResultImage(node, src, { fallback: root.querySelector('[data-role="brand-logo-fallback"]'), wrapper: root.querySelector('[data-role="brand-logo-shell"]') });
+    } else if(node.matches('[data-role="student-passport"]')){
+      bindResultImage(node, src, { fallback: root.querySelector('[data-role="passport-fallback"]'), wrapper: root.querySelector('[data-role="passport-card"]') });
+    } else if(node.matches('[data-role="result-watermark"]')){
+      bindResultImage(node, src, { hideWrapperOnFail:true, wrapper: node });
+    } else if(node.matches('[data-role="result-signature"]')){
+      bindResultImage(node, src, { hideWrapperOnFail:true, wrapper: node });
+    }
+  });
 }
 function formatDate(value){
   if(!value) return '—';
@@ -434,38 +556,27 @@ function buildResultMarkup(d){
   const theme = getTemplateTheme();
   const passed = String(d.passedStatus || '').toUpperCase() === 'PASSED';
   const brandName = d.brandName || 'Genz EduTech Innovations';
-  const logo = normalizeImageUrl(d.brandLogoUrl || '');
-  const signature = normalizeImageUrl(d.signatureUrl || '');
-  const passport = normalizeImageUrl(d.passportUrl || '');
-  const layout = theme.layout || 'hero';
+  const logo = String(d.brandLogoUrl || '').trim();
+  const signature = String(d.signatureUrl || '').trim();
+  const passport = String(d.passportUrl || '').trim();
   const summaryTable = buildTable(summaryRows(d));
   const performanceTable = buildTable(performanceRows(d), 'performance-table');
-  const infoPanel = `<section class="panel"><h3>Student Information</h3>${summaryTable}</section>`;
-  const performancePanel = `<section class="panel"><h3>Performance Summary</h3>${performanceTable}</section>`;
-  const passportPanel = passport ? `<aside class="passport-card"><img src="${esc(passport)}" alt="Student passport" referrerpolicy="no-referrer"><div class="cap">Student Passport</div></aside>` : '';
+  const studentBanner = `<div class="student-banner"><div><div class="label">Student</div><div class="name">${esc(d.fullName || 'Student')}</div></div><div class="student-pill-stack"><div class="student-pill"><span>Reg ID</span>${esc(d.regId || '—')}</div><div class="student-pill"><span>Username</span>${esc(d.username || '—')}</div></div></div>`;
+  const infoPanel = `<section class="panel info-panel"><div class="panel-head"><h3>Student Information</h3><span class="panel-chip">${esc(d.examTitle || d.examCode || 'Result Slip')}</span></div>${studentBanner}${summaryTable}</section>`;
+  const performancePanel = `<section class="panel"><div class="panel-head"><h3>Performance Summary</h3><span class="panel-chip ${passed ? 'pass' : 'fail'}">${esc(d.passedStatus || '—')}</span></div>${performanceTable}</section>`;
+  const passportPanel = `<aside class="passport-card" data-role="passport-card"><div class="passport-frame"><img alt="Student passport" class="passport-image" data-role="student-passport" data-image-source="${esc(passport)}" style="display:none" referrerpolicy="no-referrer"><div class="passport-fallback" data-role="passport-fallback"><div><span>Student Passport</span><strong>${passport ? 'Loading image…' : 'No passport uploaded yet'}</strong></div></div></div><div class="cap">Student Passport</div><div class="passport-meta"><div class="meta-item"><span>Registration ID</span><b>${esc(d.regId || '—')}</b></div><div class="meta-item"><span>Username</span><b>${esc(d.username || '—')}</b></div></div></aside>`;
   const remark = `<div class="remark-box"><strong>Remark / Message:</strong><br>${esc(d.statusMessage || 'No custom message available for this result.')}</div>`;
-  const signatureBlock = `<div class="sign-row"><div class="muted">Result verified from the official published-result portal.</div><div class="signature-box">${signature ? `<img src="${esc(signature)}" alt="Signature" referrerpolicy="no-referrer">` : ''}<div class="signature-line">Authorized Signature</div></div></div>`;
-  let layoutBody = '';
-  if(layout === 'split'){
-    layoutBody = `<div class="identity-band"><div class="sheet-grid">${performancePanel}${infoPanel}</div>${passportPanel}</div>${remark}`;
-  } else if(layout === 'stacked'){
-    layoutBody = `<div style="display:grid;gap:18px">${passportPanel ? `<div style="display:flex;justify-content:flex-end">${passportPanel}</div>` : ''}${infoPanel}${performancePanel}${remark}</div>`;
-  } else if(layout === 'minimal'){
-    layoutBody = `<div style="display:grid;gap:18px">${infoPanel}${passportPanel ? `<div style="display:flex;justify-content:flex-start">${passportPanel}</div>` : ''}${performancePanel}${remark}</div>`;
-  } else if(layout === 'executive'){
-    layoutBody = `<div class="remark-box" style="background:rgba(255,255,255,.7);border-style:solid"><strong>Issued For:</strong> ${esc(d.fullName || 'Student')} • <strong>${esc(d.examTitle || '')}</strong></div><div class="identity-band"><div class="sheet-grid">${infoPanel}${performancePanel}</div>${passportPanel}</div>${remark}`;
-  } else if(layout === 'ribbon'){
-    layoutBody = `<div class="remark-box" style="background:linear-gradient(90deg,rgba(59,130,246,.08),rgba(168,85,247,.1));border-style:solid"><strong>Design Highlight:</strong> ${esc(theme.name)} layout with stronger summary visibility.</div><div class="identity-band"><div class="sheet-grid">${infoPanel}${performancePanel}</div>${passportPanel}</div>${remark}`;
-  } else {
-    layoutBody = `<div class="identity-band"><div class="sheet-grid">${infoPanel}${performancePanel}</div>${passportPanel}</div>${remark}`;
-  }
+  const signatureBlock = `<div class="sign-row"><div class="muted">Result verified from the official published-result portal.</div><div class="signature-box">${signature ? `<img data-role="result-signature" data-image-source="${esc(signature)}" alt="Signature" referrerpolicy="no-referrer" style="display:none">` : ''}<div class="signature-line">Authorized Signature</div></div></div>`;
   return `
     <article class="template-shell" style="--theme-header:${theme.header};--theme-border:${theme.border};--theme-paper:${theme.paper};--theme-body:${theme.body};--theme-panel:${theme.panel};--theme-panel-border:${theme.panelBorder};--theme-card-border:${theme.cardBorder};--theme-table-line:${theme.tableLine};--theme-table-head:${theme.tableHead};--theme-table-head-text:${theme.tableHeadText};--theme-table-body:${theme.tableBody};--theme-remark:${theme.remark}">
-      ${logo && layout !== 'minimal' ? `<img src="${esc(logo)}" alt="Watermark" class="template-watermark" referrerpolicy="no-referrer">` : ''}
+      ${logo ? `<img data-role="result-watermark" data-image-source="${esc(logo)}" alt="Watermark" class="template-watermark" referrerpolicy="no-referrer" style="display:none">` : ''}
       <div class="result-header">
-        <div class="result-header-row" style="align-items:${layout === 'stacked' ? 'flex-start' : 'center'}">
+        <div class="result-header-row">
           <div class="brand-stack">
-            ${logo ? `<img src="${esc(logo)}" alt="Brand logo" class="brand-logo" referrerpolicy="no-referrer">` : ''}
+            <div class="brand-logo-shell" data-role="brand-logo-shell">
+              ${logo ? `<img alt="Brand logo" class="brand-logo" data-role="result-brand-logo" data-image-source="${esc(logo)}" style="display:none" referrerpolicy="no-referrer">` : ''}
+              <div class="brand-logo-fallback" data-role="brand-logo-fallback">${esc(initialsFromText(brandName))}</div>
+            </div>
             <div>
               <h2>${esc(brandName)}</h2>
               <div class="result-sub">Official Student Result Slip • ${esc(theme.name)} Design</div>
@@ -481,7 +592,10 @@ function buildResultMarkup(d){
       </div>
       <div class="result-body">
         <div class="summary-strip">${buildSummaryCards(d)}</div>
-        ${layoutBody}
+        <div class="result-content-grid">
+          <div class="result-main-stack">${infoPanel}${performancePanel}${remark}</div>
+          ${passportPanel}
+        </div>
         ${signatureBlock}
       </div>
     </article>`;
@@ -490,6 +604,7 @@ function rerenderCurrentResult(){
   updateMetrics();
   if(!state.currentResult) return;
   $('resultBox').innerHTML = buildResultMarkup(state.currentResult);
+  bindResultMedia($('resultBox'), state.currentResult);
   renderReview(state.currentResult.allowReview ? (state.currentResult.review || []) : []);
 }
 async function fetchImageDataUrl(url){
