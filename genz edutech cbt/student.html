@@ -162,19 +162,30 @@ button:hover{transform:translateY(-1px)}
   margin-top:10px;padding:10px 12px;border-radius:12px;border:1px solid #fecaca;background:#fff1f2;color:#b91c1c;font-size:13px;
 }
 .warning-overlay{
-  position:fixed;inset:0;z-index:9997;background:rgba(15,23,42,.55);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:16px;
+  position:fixed;inset:0;z-index:9997;background:rgba(15,23,42,.55);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:16px;overflow:auto;
 }
 .warning-overlay.show{display:flex}
 .warning-card{
-  width:min(100%,560px);background:rgba(255,255,255,.96);border:1px solid rgba(255,255,255,.75);border-radius:22px;box-shadow:0 24px 60px rgba(0,0,0,.22);padding:22px;
+  width:min(100%,620px);max-height:min(88vh,760px);background:rgba(255,255,255,.98);border:1px solid rgba(255,255,255,.75);border-radius:22px;box-shadow:0 24px 60px rgba(0,0,0,.22);padding:18px 18px 14px;display:flex;flex-direction:column;overflow:hidden;position:relative;touch-action:none;
 }
-.warning-card h3{margin:0 0 10px;font-size:1.2rem}
+.warning-card h3{margin:0 0 10px;font-size:1.2rem;cursor:move;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.warning-card h3::after{content:"Drag to move";font-size:11px;font-weight:700;color:#64748b;letter-spacing:.02em;cursor:move}
+.warning-body{overflow:auto;padding-right:6px;margin-right:-4px;flex:1;min-height:0}
+.warning-actions{padding-top:12px;margin-top:8px;border-top:1px solid #e2e8f0;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;background:rgba(255,255,255,.96)}
 .warning-list{margin:12px 0 18px;padding-left:20px;color:#334155;line-height:1.7}
 .warning-banner{
   padding:12px 14px;border-radius:14px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;font-size:14px;margin-bottom:14px;line-height:1.65;
 }
 .warning-text{margin:0 0 14px;color:#334155;line-height:1.75}
 .warning-strong{font-weight:800;color:#7f1d1d}
+@media (max-width: 640px){
+  .warning-overlay{align-items:flex-start;padding:10px}
+  .warning-card{width:100%;max-height:calc(100vh - 20px);border-radius:18px;padding:16px 14px 12px;touch-action:auto}
+  .warning-card h3{font-size:1.05rem;cursor:default}
+  .warning-card h3::after{content:"Swipe/scroll to read";cursor:default}
+  .warning-body{padding-right:2px;margin-right:0}
+  .warning-actions{padding-top:10px}
+}
 .violation-float{
   position:fixed;top:86px;left:50%;transform:translateX(-50%) translateY(-30px) scale(.94);
   width:min(92vw,540px);z-index:10000;opacity:0;pointer-events:none;
@@ -301,21 +312,23 @@ button:hover{transform:translateY(-1px)}
 </div>
 
 <div id="warningOverlay" class="warning-overlay">
-  <div class="warning-card">
-    <h3>Exam Instructions, Warning & Consequences</h3>
-    <div class="warning-banner"><strong>Strict Examination Warning</strong><br>This examination is under active monitoring. Your camera, audio, snapshots, video, and screen activity are being reviewed.</div>
-    <p class="warning-text">Any suspicious act, including looking away from your screen, unclear facial capture, background assistance, whispers, unusual movement, blocking of camera, or interference with any monitoring feature, will be treated as a possible attempt to cheat.</p>
-    <ul class="warning-list">
-      <li>Right-click, copy, cut, paste, drag, and text selection are disabled during the exam.</li>
-      <li>If you switch tabs, minimize the page, or move away from the exam window <strong>4 times</strong>, the exam will be submitted automatically.</li>
-      <li>Your camera must stay on throughout the exam, and you must remain clearly visible and alone.</li>
-      <li>Do not refresh, close, or leave the page unless instructed.</li>
-      <li>Any result linked to suspicious behaviour may be <strong>questioned, withheld, placed on probation, or cancelled</strong>.</li>
-      <li>Where misconduct is confirmed, the candidate will face <strong>immediate disqualification</strong>.</li>
-    </ul>
-    <p class="warning-text warning-strong">If you cheat, you risk losing your result completely.</p>
-    <p class="warning-text">You are therefore advised to remain visible, stay alone, avoid distractions, and write your examination with honesty.</p>
-    <div class="actions">
+  <div id="warningCard" class="warning-card">
+    <h3 id="warningCardHandle">Exam Instructions, Warning & Consequences</h3>
+    <div class="warning-body">
+      <div class="warning-banner"><strong>Strict Examination Warning</strong><br>This examination is under active monitoring. Your camera, audio, snapshots, video, and screen activity are being reviewed.</div>
+      <p class="warning-text">Any suspicious act, including looking away from your screen, unclear facial capture, background assistance, whispers, unusual movement, blocking of camera, or interference with any monitoring feature, will be treated as a possible attempt to cheat.</p>
+      <ul class="warning-list">
+        <li>Right-click, copy, cut, paste, drag, and text selection are disabled during the exam.</li>
+        <li>If you switch tabs, minimize the page, or move away from the exam window <strong>4 times</strong>, the exam will be submitted automatically.</li>
+        <li>Your camera must stay on throughout the exam, and you must remain clearly visible and alone.</li>
+        <li>Do not refresh, close, or leave the page unless instructed.</li>
+        <li>Any result linked to suspicious behaviour may be <strong>questioned, withheld, placed on probation, or cancelled</strong>.</li>
+        <li>Where misconduct is confirmed, the candidate will face <strong>immediate disqualification</strong>.</li>
+      </ul>
+      <p class="warning-text warning-strong">If you cheat, you risk losing your result completely.</p>
+      <p class="warning-text">You are therefore advised to remain visible, stay alone, avoid distractions, and write your examination with honesty.</p>
+    </div>
+    <div class="actions warning-actions">
       <button type="button" id="cancelStartBtn" class="ghost">Cancel</button>
       <button type="button" id="continueStartBtn">I Understand, Start Exam</button>
     </div>
@@ -728,8 +741,82 @@ function clearProctorAlert(){
   if (box) box.remove();
 }
 
-function showWarningOverlay(){ $("warningOverlay").classList.add("show"); }
-function hideWarningOverlay(){ $("warningOverlay").classList.remove("show"); }
+let warningDragState = null;
+
+function resetWarningCardPosition(){
+  const card = $("warningCard");
+  if (!card) return;
+  card.style.transform = "";
+}
+
+function setupWarningCardDrag(){
+  const card = $("warningCard");
+  const handle = $("warningCardHandle");
+  if (!card || !handle || card.dataset.dragReady === "1") return;
+  card.dataset.dragReady = "1";
+
+  const getPoint = (event) => {
+    if (event.touches && event.touches[0]) return event.touches[0];
+    if (event.changedTouches && event.changedTouches[0]) return event.changedTouches[0];
+    return event;
+  };
+
+  const startDrag = (event) => {
+    if (window.innerWidth <= 640) return;
+    const point = getPoint(event);
+    const rect = card.getBoundingClientRect();
+    const currentX = Number(card.dataset.offsetX || 0);
+    const currentY = Number(card.dataset.offsetY || 0);
+    warningDragState = {
+      startX: point.clientX,
+      startY: point.clientY,
+      offsetX: currentX,
+      offsetY: currentY,
+      rectWidth: rect.width,
+      rectHeight: rect.height
+    };
+    document.body.style.userSelect = "none";
+    event.preventDefault();
+  };
+
+  const moveDrag = (event) => {
+    if (!warningDragState) return;
+    const point = getPoint(event);
+    const limitX = Math.max(0, (window.innerWidth - warningDragState.rectWidth) / 2 - 8);
+    const limitY = Math.max(0, (window.innerHeight - warningDragState.rectHeight) / 2 - 8);
+    const nextX = Math.max(-limitX, Math.min(limitX, warningDragState.offsetX + (point.clientX - warningDragState.startX)));
+    const nextY = Math.max(-limitY, Math.min(limitY, warningDragState.offsetY + (point.clientY - warningDragState.startY)));
+    card.dataset.offsetX = String(nextX);
+    card.dataset.offsetY = String(nextY);
+    card.style.transform = `translate(${nextX}px, ${nextY}px)`;
+    event.preventDefault();
+  };
+
+  const endDrag = () => {
+    warningDragState = null;
+    document.body.style.userSelect = "";
+  };
+
+  handle.addEventListener("mousedown", startDrag);
+  handle.addEventListener("touchstart", startDrag, { passive:false });
+  window.addEventListener("mousemove", moveDrag, { passive:false });
+  window.addEventListener("touchmove", moveDrag, { passive:false });
+  window.addEventListener("mouseup", endDrag);
+  window.addEventListener("touchend", endDrag);
+  window.addEventListener("resize", () => {
+    if (window.innerWidth <= 640) resetWarningCardPosition();
+  });
+}
+
+function showWarningOverlay(){
+  resetWarningCardPosition();
+  setupWarningCardDrag();
+  $("warningOverlay").classList.add("show");
+}
+function hideWarningOverlay(){
+  $("warningOverlay").classList.remove("show");
+  resetWarningCardPosition();
+}
 
 function showViolationFloat(reason, count){
   clearTimeout(violationToastTimer);
