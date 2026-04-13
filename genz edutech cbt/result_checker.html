@@ -279,7 +279,7 @@ button.light{background:#fff;color:#0f172a;border:1px solid #cbd5e1;box-shadow:n
 </div>
 
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGWwOrSMSieQ56AXszY_5RjO88ETNBqgIGaorpWfEEAUJ8g1GOBxtnH3LWl6SyVAUh/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz55gzn_mfabvr7oD79sh6GcLZxuu7ByffV6nN5DzM42Ny9recRdW6u07cazPjDfTXbGQ/exec";
 async function loadSiteFavicon(){ try{ const u=new URL(APPS_SCRIPT_URL); u.searchParams.set('action','getPublicSiteContent'); u.searchParams.set('_ts',Date.now()); const res=await fetch(u.toString()); const json=await res.json(); const url=json && json.data && (json.data.siteFaviconUrl || json.data.resultBrandLogoUrl); if(url && document.getElementById('siteFavicon')) document.getElementById('siteFavicon').href=normalizeImageUrl(url); }catch(err){} }
 const $ = id => document.getElementById(id);
 const state = { publishedResults: [], currentResult: null, selectedPublishedIds: new Set(), currentResultId: '' };
