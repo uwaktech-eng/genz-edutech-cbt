@@ -774,6 +774,19 @@ function clearSubadminActionToken(){ localStorage.removeItem(SUBADMIN_ACTION_SES
 function getEffectiveAdminRole(){ return (currentAdminRole || getStoredAdminRole() || "").toLowerCase(); }
 function setAuth(data){ localStorage.setItem(ADMIN_TOKEN_KEY, data.token); if(data && data.role){ currentAdminRole = data.role; localStorage.setItem(ADMIN_TOKEN_KEY + "_role", data.role); } }
 function clearAuth(){ localStorage.removeItem(ADMIN_TOKEN_KEY); localStorage.removeItem(ADMIN_TOKEN_KEY + "_role"); clearSubadminActionToken(); currentAdminRole = ""; }
+async function confirmSessionReady(token, expectedRoles){
+  const allowed = Array.isArray(expectedRoles) ? expectedRoles : [expectedRoles];
+  for(let attempt=0; attempt<3; attempt++){
+    const res = await apiRequest("validateSession", { token, sessionToken: token, adminToken: token, authToken: token }, "POST");
+    const role = res && res.data ? (res.data.role || "") : "";
+    if(res.ok && res.data && allowed.includes(role)){
+      if(res.data.token) setAuth(res.data);
+      return true;
+    }
+    await new Promise(resolve => setTimeout(resolve, 350 * (attempt + 1)));
+  }
+  return false;
+}
 function esc(v){ return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
 function setFavicon(url){ const el = document.getElementById('siteFavicon'); if(el && url) el.href = normalizeDisplayImageUrl(url); }
 function readableDateTime(value){ if(!value) return ''; const d=new Date(value); return isFinite(d.getTime()) ? d.toLocaleString() : value; }
@@ -1058,8 +1071,19 @@ async function loginAdmin(){
   showLoader("Signing in...");
   try{
     const res = await apiRequest("login",{username:$("loginUsername").value.trim(), password:$("loginPassword").value, role:"admin"},"POST");
-    setStatus("loginStatus", res.message, res.ok);
-    if(res.ok && res.data){ setAuth(res.data); await showPortal(); }
+    if(res.ok && res.data){
+      setAuth(res.data);
+      const confirmed = await confirmSessionReady(res.data.token, ["principal_admin","subadmin","admin"]);
+      if(!confirmed){
+        clearAuth();
+        setStatus("loginStatus", "Signed in, but the session was not confirmed. Please try again.", false);
+        return;
+      }
+      setStatus("loginStatus", res.message, true);
+      await showPortal();
+      return;
+    }
+    setStatus("loginStatus", res.message, false);
   } finally {
     hideLoader();
     if(btn) btn.disabled = false;

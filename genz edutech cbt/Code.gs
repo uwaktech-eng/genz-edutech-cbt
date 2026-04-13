@@ -1317,8 +1317,15 @@ function roleCanManageUser_(actorRole, targetRole) {
   return false;
 }
 
+function readSessionToken_(payloadOrToken) {
+  if (payloadOrToken && typeof payloadOrToken === 'object') {
+    return trim_(payloadOrToken.token || payloadOrToken.sessionToken || payloadOrToken.adminToken || payloadOrToken.authToken);
+  }
+  return trim_(payloadOrToken);
+}
+
 function requireSession_(token, allowedRoles) {
-  var t = trim_(token);
+  var t = readSessionToken_(token);
   if (!t) throw new Error('Session token is required.');
   var sessions = getSessionRows_();
   var now = new Date().getTime();
@@ -1366,8 +1373,25 @@ function createSession_(user) {
     ExpiresAt: expires.toISOString(),
     IsActive: true
   });
+  SpreadsheetApp.flush();
   pruneSessionRowsIfNeeded_();
   return { token: token, username: user.Username, role: user.Role, fullName: user.FullName || '' };
+}
+
+function touchSession_(token) {
+  var t = trim_(token);
+  if (!t) return;
+  var sessions = getSessionRows_();
+  var now = new Date();
+  var expires = new Date(now.getTime() + SESSION_HOURS * 60 * 60 * 1000);
+  for (var i = 0; i < sessions.length; i++) {
+    if (trim_(sessions[i].Token) === t && toBool_(sessions[i].IsActive)) {
+      sessions[i].ExpiresAt = expires.toISOString();
+      updateObjectRow_(SHEETS.SESSIONS, sessions[i]._row, sessions[i]);
+      SpreadsheetApp.flush();
+      return;
+    }
+  }
 }
 
 function pruneSessionRowsIfNeeded_() {
@@ -1458,7 +1482,7 @@ function login_(payload) {
 }
 
 function logout_(payload) {
-  var token = trim_(payload.token);
+  var token = readSessionToken_(payload);
   if (!token) return response_(true, 'Signed out.');
   var sessions = getSessionRows_();
   var username = '';
@@ -1475,8 +1499,9 @@ function logout_(payload) {
 
 function validateSession_(payload) {
   try {
-    var auth = requireSession_(payload.token, []);
-    return response_(true, 'Session is valid.', { username: auth.user.Username, fullName: auth.user.FullName, role: auth.user.Role, regId: auth.user.RegId || '' });
+    var auth = requireSession_(payload, []);
+    touchSession_(auth.session.Token);
+    return response_(true, 'Session is valid.', { username: auth.user.Username, fullName: auth.user.FullName, role: auth.user.Role, regId: auth.user.RegId || '', token: auth.session.Token });
   } catch (err) {
     return response_(false, err.message);
   }
