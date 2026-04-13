@@ -2,6 +2,7 @@ const SPREADSHEET_ID = '188x7dXBhzjAewBcXFTt8_s_a8isRWS5ATd5M-NXa-cw';
 const ADMIN_SIGNUP_KEY = '1234';
 const SESSION_HOURS = 12;
 const ROOT_FOLDER_NAME = 'Genz CBT System Storage';
+const ROOT_FOLDER_ID_PROP = 'GENZ_CBT_ROOT_FOLDER_ID';
 const TZ = Session.getScriptTimeZone() || 'Africa/Lagos';
 
 const SHEETS = {
@@ -135,6 +136,7 @@ function handleRequest_(params) {
       case 'uploadVideoClip': result = uploadVideoClip_(payload); break;
       case 'uploadScreenClip': result = uploadScreenClip_(payload); break;
       case 'ensureProctoringFolders': result = ensureProctoringFolders_(payload); break;
+      case 'ensureDriveStructure': result = ensureDriveStructureAction_(payload); break;
 
       case 'listResultsByExam': result = listResultsByExam_(payload); break;
       case 'setResultPublished': result = setResultPublished_(payload); break;
@@ -519,6 +521,12 @@ function getOrCreateSheet_(name) {
   return sh;
 }
 
+function initializeDriveFolders() {
+  ensureSystem_();
+  var root = ensureDriveStructure_();
+  return root ? root.getUrl() : '';
+}
+
 function ensureHeader_(sheetName) {
   var sh = getOrCreateSheet_(sheetName);
   var wanted = HEADERS[sheetName];
@@ -535,6 +543,7 @@ function ensureHeader_(sheetName) {
 function ensureSystem_() {
   var names = Object.keys(SHEETS).map(function(k){ return SHEETS[k]; });
   for (var i = 0; i < names.length; i++) ensureHeader_(names[i]);
+  try { ensureDriveStructure_(); } catch (driveErr) {}
 
   var settings = getObjects_(SHEETS.SETTINGS);
   if (!settings.length) {
@@ -3245,6 +3254,7 @@ function getProctoringFolderView_(payload) {
 
 function ensureProctoringFolders_(payload) {
   requireSession_(payload.token, ['student', 'admin']);
+  ensureDriveStructure_();
   var examCode = trim_(payload.examCode);
   var regId = trim_(payload.regId);
   if (!examCode || !regId) return response_(false, 'Exam code and Reg ID are required.');
@@ -3519,15 +3529,61 @@ function safeName_(value) {
 }
 
 function getRootFolder_() {
+  var props = PropertiesService.getScriptProperties();
+  var existingId = trim_(props.getProperty(ROOT_FOLDER_ID_PROP));
+  if (existingId) {
+    try {
+      return DriveApp.getFolderById(existingId);
+    } catch (err) {}
+  }
   var folders = DriveApp.getFoldersByName(ROOT_FOLDER_NAME);
-  if (folders.hasNext()) return folders.next();
-  return DriveApp.createFolder(ROOT_FOLDER_NAME);
+  if (folders.hasNext()) {
+    var found = folders.next();
+    try { props.setProperty(ROOT_FOLDER_ID_PROP, found.getId()); } catch (err2) {}
+    return found;
+  }
+  var created = DriveApp.createFolder(ROOT_FOLDER_NAME);
+  try { props.setProperty(ROOT_FOLDER_ID_PROP, created.getId()); } catch (err3) {}
+  return created;
 }
 
 function getOrCreateChildFolder_(parent, name) {
   var folders = parent.getFoldersByName(name);
   if (folders.hasNext()) return folders.next();
   return parent.createFolder(name);
+}
+
+function ensureDriveStructure_() {
+  var root = getRootFolder_();
+  var baseFolders = [
+    'Branding Assets',
+    'Student Passports',
+    'Admin Uploads',
+    'Managed Uploads',
+    'Proctoring Snapshots',
+    'Proctoring Audio',
+    'Proctoring Video',
+    'Proctoring Screen Recordings',
+    'Proctoring Screen'
+  ];
+  for (var i = 0; i < baseFolders.length; i++) getOrCreateChildFolder_(root, baseFolders[i]);
+  getNestedFolder_(['Branding Assets', 'Result Logos']);
+  getNestedFolder_(['Branding Assets', 'Result Signatures']);
+  getNestedFolder_(['Branding Assets', 'Site Favicons']);
+  getNestedFolder_(['Branding Assets', 'CEO Images']);
+  getNestedFolder_(['Admin Uploads', 'Question Images']);
+  getNestedFolder_(['Admin Uploads', 'Question Image Links']);
+  return root;
+}
+
+function ensureDriveStructureAction_(payload) {
+  var auth = requireSession_(payload.token, ['admin', 'student']);
+  var root = ensureDriveStructure_();
+  return response_(true, 'Drive folders are ready.', {
+    rootFolderId: root.getId(),
+    rootFolderUrl: root.getUrl(),
+    actor: auth && auth.user ? auth.user.Username : ''
+  });
 }
 
 function getNestedFolder_(names) {
@@ -3604,6 +3660,7 @@ function persistQuestionImageIfPossible_(imageUrl, examCode) {
 }
 
 function uploadSnapshot_(payload) {
+  ensureDriveStructure_();
   assertUploadWithinLimit_(payload.imageData, 0);
   var auth = requireSession_(payload.token, ['student']);
   var examCode = trim_(payload.examCode);
@@ -3623,6 +3680,7 @@ function uploadSnapshot_(payload) {
 }
 
 function uploadAudioClip_(payload) {
+  ensureDriveStructure_();
   assertUploadWithinLimit_(payload.audioData, 0);
   var auth = requireSession_(payload.token, ['student']);
   var examCode = trim_(payload.examCode);
@@ -3647,6 +3705,7 @@ function uploadAudioClip_(payload) {
 }
 
 function uploadVideoClip_(payload) {
+  ensureDriveStructure_();
   assertUploadWithinLimit_(payload.videoData, 0);
   var auth = requireSession_(payload.token, ['student']);
   var examCode = trim_(payload.examCode);
@@ -3670,6 +3729,7 @@ function uploadVideoClip_(payload) {
 }
 
 function uploadScreenClip_(payload) {
+  ensureDriveStructure_();
   assertUploadWithinLimit_(payload.videoData, 0);
   var auth = requireSession_(payload.token, ['student']);
   var examCode = trim_(payload.examCode);
@@ -3789,6 +3849,7 @@ function managedFilePublicShape_(row) {
 }
 
 function uploadManagedFile_(payload) {
+  ensureDriveStructure_();
   var actor = requireAdminAction_(payload, true).user;
   var fileName = trim_(payload.fileName || payload.originalName);
   var mimeType = trim_(payload.mimeType) || 'application/octet-stream';
