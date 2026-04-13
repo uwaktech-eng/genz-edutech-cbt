@@ -100,16 +100,18 @@ button:hover{transform:translateY(-1px)}
   position:sticky;top:78px;z-index:10;font-size:18px;font-weight:800;color:#dc2626;background:#fff7f7;
   border:1px solid #fecaca;border-radius:14px;padding:12px 14px;margin-bottom:16px;
 }
-.question-shell{display:grid;gap:16px}
+.exam-layout{display:grid;grid-template-columns:104px minmax(0,1fr);gap:16px;align-items:start}
+.question-shell{display:grid;gap:16px;min-width:0}
 .question-nav{
-  position:sticky;top:134px;z-index:9;display:flex;flex-wrap:wrap;gap:8px;padding:12px;
+  position:sticky;top:134px;z-index:9;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:12px;
   background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:16px;backdrop-filter:blur(8px);
+  align-content:start;max-height:calc(100vh - 160px);overflow:auto;
 }
-.qnum{min-width:40px;height:40px;border:none;border-radius:10px;background:#eef2ff;color:#1e293b;font-weight:800;cursor:pointer}
+.qnum{width:100%;min-width:0;height:40px;border:none;border-radius:10px;background:#eef2ff;color:#1e293b;font-weight:800;cursor:pointer}
 .qnum.answered{background:#dcfce7;color:#166534}
 .qnum.active{outline:2px solid #4338ca}
 .question-block{
-  border:1px solid #e2e8f0;border-radius:16px;background:rgba(248,250,252,.92);padding:16px;
+  border:1px solid #e2e8f0;border-radius:16px;background:rgba(248,250,252,.92);padding:16px;scroll-margin-top:150px;
 }
 .question-title{font-weight:700;margin-bottom:12px;line-height:1.6}
 .question-image{
@@ -169,8 +171,10 @@ button:hover{transform:translateY(-1px)}
 .warning-card h3{margin:0 0 10px;font-size:1.2rem}
 .warning-list{margin:12px 0 18px;padding-left:20px;color:#334155;line-height:1.7}
 .warning-banner{
-  padding:12px 14px;border-radius:14px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;font-size:14px;margin-bottom:14px;
+  padding:12px 14px;border-radius:14px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;font-size:14px;margin-bottom:14px;line-height:1.65;
 }
+.warning-text{margin:0 0 14px;color:#334155;line-height:1.75}
+.warning-strong{font-weight:800;color:#7f1d1d}
 .violation-float{
   position:fixed;top:86px;left:50%;transform:translateX(-50%) translateY(-30px) scale(.94);
   width:min(92vw,540px);z-index:10000;opacity:0;pointer-events:none;
@@ -196,9 +200,9 @@ button:hover{transform:translateY(-1px)}
 @media (max-width:900px){.auth-wrap{grid-template-columns:1fr}}
 @media (max-width:640px){
   .container{padding:0 12px 28px}.auth-wrap{padding:0 12px}.card{padding:16px;border-radius:16px}.head{padding:12px}
-  .timer{top:70px}.question-nav{top:124px}.actions{flex-direction:column}.actions > *{width:100%;margin-right:0}
-  .qnum{min-width:36px;height:36px}.camera-monitor{width:118px;right:10px;bottom:10px}.camera-monitor video{height:88px}
-  .warning-card{padding:18px}.violation-float{top:76px}
+  .timer{top:70px}.exam-layout{grid-template-columns:74px minmax(0,1fr);gap:10px}.question-nav{top:124px;padding:8px;gap:6px;grid-template-columns:1fr;max-height:calc(100vh - 148px)}.actions{flex-direction:column}.actions > *{width:100%;margin-right:0}
+  .qnum{height:36px;font-size:13px}.camera-monitor{width:118px;right:10px;bottom:10px}.camera-monitor video{height:88px}
+  .question-block{scroll-margin-top:138px}.warning-card{padding:18px}.violation-float{top:76px}
 }
 </style>
 </head>
@@ -271,8 +275,10 @@ button:hover{transform:translateY(-1px)}
 
     <div class="card hidden" id="examCard">
       <div class="timer">Time Left: <span id="timeLeft">00:00</span></div>
-      <div id="questionNavigator" class="question-nav"></div>
-      <form id="examForm" class="question-shell"></form>
+      <div class="exam-layout">
+        <div id="questionNavigator" class="question-nav"></div>
+        <form id="examForm" class="question-shell"></form>
+      </div>
       <div class="actions">
         <button class="success" id="submitBtn" type="button">Submit Exam</button>
       </div>
@@ -296,15 +302,19 @@ button:hover{transform:translateY(-1px)}
 
 <div id="warningOverlay" class="warning-overlay">
   <div class="warning-card">
-    <h3>Exam Instructions & Consequences</h3>
-    <div class="warning-banner">Camera access is compulsory. Your face must remain visible during the exam.</div>
+    <h3>Exam Instructions, Warning & Consequences</h3>
+    <div class="warning-banner"><strong>Strict Examination Warning</strong><br>This examination is under active monitoring. Your camera, audio, snapshots, video, and screen activity are being reviewed.</div>
+    <p class="warning-text">Any suspicious act, including looking away from your screen, unclear facial capture, background assistance, whispers, unusual movement, blocking of camera, or interference with any monitoring feature, will be treated as a possible attempt to cheat.</p>
     <ul class="warning-list">
       <li>Right-click, copy, cut, paste, drag, and text selection are disabled during the exam.</li>
       <li>If you switch tabs, minimize the page, or move away from the exam window <strong>4 times</strong>, the exam will be submitted automatically.</li>
-      <li>Your camera must stay on throughout the exam.</li>
+      <li>Your camera must stay on throughout the exam, and you must remain clearly visible and alone.</li>
       <li>Do not refresh, close, or leave the page unless instructed.</li>
-      <li>By continuing, you agree to these monitoring rules.</li>
+      <li>Any result linked to suspicious behaviour may be <strong>questioned, withheld, placed on probation, or cancelled</strong>.</li>
+      <li>Where misconduct is confirmed, the candidate will face <strong>immediate disqualification</strong>.</li>
     </ul>
+    <p class="warning-text warning-strong">If you cheat, you risk losing your result completely.</p>
+    <p class="warning-text">You are therefore advised to remain visible, stay alone, avoid distractions, and write your examination with honesty.</p>
     <div class="actions">
       <button type="button" id="cancelStartBtn" class="ghost">Cancel</button>
       <button type="button" id="continueStartBtn">I Understand, Start Exam</button>
