@@ -321,7 +321,7 @@ button:hover{transform:translateY(-1px)}
 </div>
 
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz55gzn_mfabvr7oD79sh6GcLZxuu7ByffV6nN5DzM42Ny9recRdW6u07cazPjDfTXbGQ/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby05_byfF2HGowvNZR1HAHmXF4gAlsm3iIJu8IJLKD_KK4NR_Hz6ZVHhFDdMqIvddGy2w/exec";
 async function loadSiteFavicon(){ try{ const u=new URL(APPS_SCRIPT_URL); u.searchParams.set('action','getPublicSiteContent'); u.searchParams.set('_ts',Date.now()); const res=await fetch(u.toString()); const json=await res.json(); const url=json && json.data && (json.data.siteFaviconUrl || json.data.resultBrandLogoUrl); if(url && document.getElementById('siteFavicon')) document.getElementById('siteFavicon').href=url; }catch(err){} }
 const TOKEN_KEY = "cbt_auth_token";
 const ROLE_KEY = "cbt_auth_role";

@@ -1,4 +1,4 @@
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGWwOrSMSieQ56AXszY_5RjO88ETNBqgIGaorpWfEEAUJ8g1GOBxtnH3LWl6SyVAUh/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby05_byfF2HGowvNZR1HAHmXF4gAlsm3iIJu8IJLKD_KK4NR_Hz6ZVHhFDdMqIvddGy2w/exec";
 const FALLBACK_FAVICON = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%23081224%22/%3E%3Ctext x=%2250%25%22 y=%2254%25%22 font-size=%2232%22 text-anchor=%22middle%22 fill=%22%23facc15%22 font-family=%22Arial%22 dy=%22.1em%22%3EG%3C/text%3E%3C/svg%3E';
 const PUBLIC_SITE_CACHE_KEY = 'genz_cbt_public_site_content_v1';
 const PUBLIC_SITE_BUST_KEY = 'genz_cbt_public_site_bust_v1';

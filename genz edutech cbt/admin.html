@@ -609,7 +609,7 @@ button[disabled]{transform:none!important;box-shadow:none!important}
 </section>
 
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz55gzn_mfabvr7oD79sh6GcLZxuu7ByffV6nN5DzM42Ny9recRdW6u07cazPjDfTXbGQ/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby05_byfF2HGowvNZR1HAHmXF4gAlsm3iIJu8IJLKD_KK4NR_Hz6ZVHhFDdMqIvddGy2w/exec";
 const ADMIN_TOKEN_KEY = "cbt_admin_token_v2";
 const SUBADMIN_ACTION_SESSION_KEY = "cbt_subadmin_action_session_v2";
 const SUBADMIN_ACTION_SESSION_EXP_KEY = "cbt_subadmin_action_session_exp_v2";
@@ -619,7 +619,8 @@ const SUBADMIN_TOKEN_ACTIONS = new Set([
   "addQuestion","updateQuestionByExam","deleteQuestionByExam","restoreQuestionByExam","hardDeleteQuestionByExam","importQuestions","clearQuestionsByExam","bulkDeleteQuestionsByExam","bulkRestoreQuestionsByExam","bulkHardDeleteQuestionsByExam",
   "createPermissionCode","deletePermissionCode","clearPermissionCodes",
   "bulkSetResultPublished","bulkDeleteResults","bulkRestoreResults","bulkHardDeleteResults",
-  "deleteSnapshot","restoreSnapshot","hardDeleteSnapshot","bulkDeleteSnapshots","bulkRestoreSnapshots","bulkHardDeleteSnapshots"
+  "deleteSnapshot","restoreSnapshot","hardDeleteSnapshot","bulkDeleteSnapshots","bulkRestoreSnapshots","bulkHardDeleteSnapshots",
+  "sendBulkEmail","uploadManagedFile","setManagedFileDownloadable","deleteManagedFile","restoreManagedFile","hardDeleteManagedFile","reimportDriveFiles","refreshManagedFiles"
 ]);
 
 let examsData=[], questionsData=[], resultsData=[], candidatesData=[], adminsData=[], studentsData=[], snapshotsData=[], audioData=[], videosData=[], screenData=[], managedFilesData=[], lastGeneratedCsv="", lastGeneratedFilename="student_passwords.csv";

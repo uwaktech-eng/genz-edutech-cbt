@@ -1,4 +1,4 @@
-const SPREADSHEET_ID = '11mblw80XInjSn2Bgjv7bXO_zSkIf-egjKJX7hk0Gw1o';
+const SPREADSHEET_ID = '188x7dXBhzjAewBcXFTt8_s_a8isRWS5ATd5M-NXa-cw';
 const ADMIN_SIGNUP_KEY = '1234';
 const SESSION_HOURS = 12;
 const ROOT_FOLDER_NAME = 'Genz CBT System Storage';
@@ -3730,7 +3730,7 @@ function parseEmailList_(raw) {
 }
 
 function sendBulkEmail_(payload) {
-  var actor = requireSession_(payload.token, ['principal_admin']).user;
+  var actor = requireAdminAction_(payload, true).user;
   var subject = trim_(payload.subject);
   var body = trim_(payload.body);
   var htmlBody = sanitizeHtmlEmail_(payload.htmlBody || body.replace(/\n/g, '<br>'));
@@ -3789,7 +3789,7 @@ function managedFilePublicShape_(row) {
 }
 
 function uploadManagedFile_(payload) {
-  var actor = requireSession_(payload.token, ['principal_admin']).user;
+  var actor = requireAdminAction_(payload, true).user;
   var fileName = trim_(payload.fileName || payload.originalName);
   var mimeType = trim_(payload.mimeType) || 'application/octet-stream';
   var base64Data = trim_(payload.fileData || payload.base64Data);
@@ -3860,28 +3860,28 @@ function updateManagedFileMeta_(fileId, updater) {
 }
 
 function setManagedFileDownloadable_(payload) {
-  requireSession_(payload.token, ['principal_admin']);
+  requireAdminAction_(payload, true);
   var downloadable = toBool_(payload.downloadable);
   var row = updateManagedFileMeta_(payload.id, function(r, meta){ meta.downloadable = downloadable; });
   return response_(true, downloadable ? 'File download enabled.' : 'File download disabled.', managedFilePublicShape_(row));
 }
 
 function deleteManagedFile_(payload) {
-  var actor = requireSession_(payload.token, ['principal_admin']).user;
+  var actor = requireAdminAction_(payload, true).user;
   var row = updateManagedFileMeta_(payload.id, function(r, meta){ r.IsDeleted = true; r.DeletedAt = nowIso_(); r.DeletedBy = actor.Username; });
   try { if (trim_(row.DriveFileId)) DriveApp.getFileById(trim_(row.DriveFileId)).setTrashed(true); } catch (err) {}
   return response_(true, 'Managed file moved to trash.', managedFilePublicShape_(row));
 }
 
 function restoreManagedFile_(payload) {
-  var actor = requireSession_(payload.token, ['principal_admin']).user;
+  var actor = requireAdminAction_(payload, true).user;
   var row = updateManagedFileMeta_(payload.id, function(r, meta){ r.IsDeleted = false; r.RestoredAt = nowIso_(); r.RestoredBy = actor.Username; r.DeletedAt=''; r.DeletedBy=''; });
   try { if (trim_(row.DriveFileId)) DriveApp.getFileById(trim_(row.DriveFileId)).setTrashed(false); } catch (err) {}
   return response_(true, 'Managed file restored.', managedFilePublicShape_(row));
 }
 
 function hardDeleteManagedFile_(payload) {
-  requireSession_(payload.token, ['principal_admin']);
+  requireAdminAction_(payload, true);
   var rows = getDriveFiles_();
   var kept = [];
   var deleted = null;
@@ -3896,7 +3896,7 @@ function hardDeleteManagedFile_(payload) {
 }
 
 function reimportDriveFiles_(payload) {
-  requireSession_(payload.token, ['principal_admin']);
+  requireAdminAction_(payload, true);
   var folder = getSubFolder_('Managed Uploads');
   var files = folder.getFiles();
   var existing = getDriveFiles_();
@@ -3930,7 +3930,7 @@ function reimportDriveFiles_(payload) {
 }
 
 function refreshManagedFiles_(payload) {
-  requireSession_(payload.token, ['principal_admin']);
+  requireAdminAction_(payload, true);
   var refresh = reimportDriveFiles_(payload);
   var rows = getDriveFiles_().filter(function(r){ return normalize_(r.Kind) === 'MANAGED_FILE'; }).map(managedFilePublicShape_);
   rows.sort(function(a,b){ return String(b.createdAt).localeCompare(String(a.createdAt)); });
