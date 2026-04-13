@@ -1480,8 +1480,14 @@ function getSubadminActionTokenHash_() {
   return trim_(getSettingsMap_()['Subadmin Action Token Hash']);
 }
 
+function getAnySessionToken_(payload) {
+  payload = payload || {};
+  return trim_(payload.token || payload.sessionToken || payload.adminToken || payload.authToken || '');
+}
+
 function requireAdminAction_(payload, requireSubadminToken) {
-  var auth = requireSession_(payload.token, ['admin']);
+  payload = payload || {};
+  var auth = requireSession_(getAnySessionToken_(payload), ['admin']);
   if (requireSubadminToken && auth.user && auth.user.Role === 'subadmin') {
     var expectedHash = getSubadminActionTokenHash_();
     if (!expectedHash) throw new Error('The principal admin has not configured a subadmin action token yet.');

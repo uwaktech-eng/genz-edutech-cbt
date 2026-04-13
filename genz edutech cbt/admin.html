@@ -1517,7 +1517,8 @@ async function saveExamOptions(){
 }
 async function toggleExamActive(examCode, active){
   showLoader(active ? 'Activating exam...' : 'Deactivating exam...');
-  const res = await apiRequest('setExamActive',{examCode, active},'POST');
+  const token = getToken();
+  const res = await apiRequest('setExamActive',{examCode, active, token, sessionToken: token},'POST');
   hideLoader();
   if(!res.ok) return alert(res.message);
   await loadExams();
