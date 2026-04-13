@@ -1348,13 +1348,17 @@ function requireSession_(token, allowedRoles) {
 
 function createSession_(user) {
   var sessions = getSessionRows_();
+  var normalizedUsername = normalize_(user.Username);
   for (var i = 0; i < sessions.length; i++) {
-    if (normalize_(sessions[i].Username) === normalize_(user.Username)) sessions[i].IsActive = false;
+    if (normalize_(sessions[i].Username) === normalizedUsername && toBool_(sessions[i].IsActive)) {
+      sessions[i].IsActive = false;
+      updateObjectRow_(SHEETS.SESSIONS, sessions[i]._row, sessions[i]);
+    }
   }
   var created = new Date();
   var expires = new Date(created.getTime() + SESSION_HOURS * 60 * 60 * 1000);
   var token = Utilities.getUuid();
-  sessions.push({
+  appendObject_(SHEETS.SESSIONS, {
     Token: token,
     Username: user.Username,
     Role: user.Role,
@@ -1362,8 +1366,17 @@ function createSession_(user) {
     ExpiresAt: expires.toISOString(),
     IsActive: true
   });
-  saveSessionRows_(sessions);
+  pruneSessionRowsIfNeeded_();
   return { token: token, username: user.Username, role: user.Role, fullName: user.FullName || '' };
+}
+
+function pruneSessionRowsIfNeeded_() {
+  var sh = getOrCreateSheet_(SHEETS.SESSIONS);
+  var lastRow = sh.getLastRow();
+  var maxRows = 1500;
+  if (lastRow <= maxRows + 1) return;
+  var deleteCount = lastRow - (maxRows + 1);
+  if (deleteCount > 0) sh.deleteRows(2, deleteCount);
 }
 
 function signup_(payload) {

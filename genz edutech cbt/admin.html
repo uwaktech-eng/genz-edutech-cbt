@@ -964,6 +964,10 @@ function attachDriveImageUploader(inputId, options){
 }
 
 function createNonce(){ return `${Date.now()}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`; }
+function createAbortSignal(timeoutMs){
+  if(typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') return AbortSignal.timeout(timeoutMs);
+  return null;
+}
 async function apiRequest(action, payload={}, method="POST"){
   payload = payload || {};
   if(!payload.token && action !== "login" && action !== "signup" && action !== "getCurrentExamPublic") payload.token = getToken();
@@ -984,20 +988,26 @@ async function apiRequest(action, payload={}, method="POST"){
           url.searchParams.set(k, typeof v === "object" ? JSON.stringify(v) : String(v));
         }
       });
-      response = await fetch(url.toString(), {method:"GET"});
+      const signal = createAbortSignal(25000);
+      response = await fetch(url.toString(), {method:"GET", signal});
     }else{
       const form = new URLSearchParams();
       form.set("action", action);
       form.set("payload", JSON.stringify(payload));
+      const signal = createAbortSignal(25000);
       response = await fetch(APPS_SCRIPT_URL, {
         method:"POST",
         headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
-        body:form.toString()
+        body:form.toString(),
+        signal
       });
     }
     const text = await response.text();
     try{ return JSON.parse(text); }catch(err){ return {ok:false, message:"Server returned non-JSON response.", raw:text}; }
-  }catch(err){ return {ok:false, message:err.message || "Failed to fetch."}; }
+  }catch(err){
+    const msg = err && err.name === "TimeoutError" ? "Request timed out. Please try again." : (err && err.name === "AbortError" ? "Request timed out. Please try again." : (err.message || "Failed to fetch."));
+    return {ok:false, message:msg};
+  }
 }
 function setStatus(id,msg,ok=false){ const el=$(id); if(!el) return; el.className="status "+(ok?"ok":"error"); el.textContent=msg||""; }
 function splitCsvLine(line){ const result=[]; let current="", inQuotes=false; for(let i=0;i<line.length;i++){ const ch=line[i]; if(ch==='"'&&line[i+1]==='"'){ current+='"'; i++; continue; } if(ch==='"'){ inQuotes=!inQuotes; continue; } if(ch===','&&!inQuotes){ result.push(current); current=""; continue; } current+=ch; } result.push(current); return result; }
@@ -1043,11 +1053,17 @@ function exportTablePdf(title, head, body, filename){
 }
 
 async function loginAdmin(){
+  const btn = $("loginBtn");
+  if(btn) btn.disabled = true;
   showLoader("Signing in...");
-  const res = await apiRequest("login",{username:$("loginUsername").value.trim(), password:$("loginPassword").value, role:"admin"},"POST");
-  hideLoader();
-  setStatus("loginStatus", res.message, res.ok);
-  if(res.ok && res.data){ setAuth(res.data); await showPortal(); }
+  try{
+    const res = await apiRequest("login",{username:$("loginUsername").value.trim(), password:$("loginPassword").value, role:"admin"},"POST");
+    setStatus("loginStatus", res.message, res.ok);
+    if(res.ok && res.data){ setAuth(res.data); await showPortal(); }
+  } finally {
+    hideLoader();
+    if(btn) btn.disabled = false;
+  }
 }
 async function signupAdmin(){
   showLoader("Creating admin account...");

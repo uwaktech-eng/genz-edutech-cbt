@@ -429,6 +429,10 @@ function populateFromSavedState(){
 }
 
 function createNonce(){ return `${Date.now()}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`; }
+function createAbortSignal(timeoutMs){
+  if(typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') return AbortSignal.timeout(timeoutMs);
+  return null;
+}
 async function apiRequest(action, payload = null, method = "POST"){
   try{
     payload = payload || {};
@@ -448,22 +452,26 @@ async function apiRequest(action, payload = null, method = "POST"){
           url.searchParams.set(key, typeof value === "object" ? JSON.stringify(value) : String(value));
         }
       });
-      response = await fetch(url.toString(), { method: "GET" });
+      const signal = createAbortSignal(25000);
+      response = await fetch(url.toString(), { method: "GET", signal });
     } else {
       const form = new URLSearchParams();
       form.set("action", action);
       form.set("payload", JSON.stringify(payload));
+      const signal = createAbortSignal(25000);
       response = await fetch(APPS_SCRIPT_URL, {
         method:"POST",
         headers:{ "Content-Type":"application/x-www-form-urlencoded;charset=UTF-8" },
-        body:form.toString()
+        body:form.toString(),
+        signal
       });
     }
 
     const text = await response.text();
     try{ return JSON.parse(text); }catch(err){ return { ok:false, message:"Server returned non-JSON response.", raw:text }; }
   }catch(error){
-    return { ok:false, message:error.message || "Failed to fetch." };
+    const msg = error && error.name === "TimeoutError" ? "Request timed out. Please try again." : (error && error.name === "AbortError" ? "Request timed out. Please try again." : (error.message || "Failed to fetch."));
+    return { ok:false, message:msg };
   }
 }
 
@@ -510,19 +518,25 @@ async function showPortal(){
   await loadPublicState();
 }
 async function loginStudent(){
+  const btn = $("loginBtn");
+  if(btn) btn.disabled = true;
   showLoader("Signing in...");
-  const res = await apiRequest("login", {
-    username:$("loginUsername").value.trim(),
-    password:$("loginPassword").value,
-    role:"student"
-  }, "POST");
-  hideLoader();
-  setStatus("loginStatus", res.message, res.ok);
-  if (res.ok && res.data){
-    setAuth(res.data);
-    await showPortal();
-    populateFromSavedState();
-    await tryAutoResumeFromSavedState();
+  try{
+    const res = await apiRequest("login", {
+      username:$("loginUsername").value.trim(),
+      password:$("loginPassword").value,
+      role:"student"
+    }, "POST");
+    setStatus("loginStatus", res.message, res.ok);
+    if (res.ok && res.data){
+      setAuth(res.data);
+      await showPortal();
+      populateFromSavedState();
+      await tryAutoResumeFromSavedState();
+    }
+  } finally {
+    hideLoader();
+    if(btn) btn.disabled = false;
   }
 }
 
