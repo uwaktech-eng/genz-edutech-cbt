@@ -4,6 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>CBT Student Portal</title>
+<script>
+(function(){
+  try{
+    if(window.top !== window.self){
+      document.documentElement.style.display = 'none';
+      window.top.location = window.self.location.href;
+    }
+  }catch(err){
+    try{ window.location = window.self.location.href; }catch(e){}
+  }
+})();
+</script>
 <link id="siteFavicon" rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%23081224%22/%3E%3Ctext x=%2250%25%22 y=%2254%25%22 font-size=%2232%22 text-anchor=%22middle%22 fill=%22%23facc15%22 font-family=%22Arial%22 dy=%22.1em%22%3EG%3C/text%3E%3C/svg%3E">
 <style>
 :root{
@@ -191,6 +203,7 @@ button:hover{transform:translateY(-1px)}
 </style>
 </head>
 <body>
+<div id="screenWatermark" class="screen-watermark" data-mark="Secure CBT Session"></div>
 <div class="loader-overlay" id="loader">
   <div class="loader-card"><div class="spinner"></div><div id="loaderText">Loading...</div></div>
 </div>
@@ -219,16 +232,9 @@ button:hover{transform:translateY(-1px)}
     </div>
 
     <div class="card">
-      <h2>Student Signup</h2>
-      <p style="margin-top:0;color:#475569;font-size:14px;">Use this only if your system allows students to create their own accounts. If the admin generated accounts, log in with the username and password given.</p>
-      <label>Full Name</label>
-      <input type="text" id="signupFullName">
-      <label>Username</label>
-      <input type="text" id="signupUsername">
-      <label>Password</label>
-      <input type="password" id="signupPassword">
-      <button class="success" id="signupBtn" type="button">Sign Up</button>
-      <div id="signupStatus" class="status"></div>
+      <h2>Student Access</h2>
+      <p style="margin-top:0;color:#475569;font-size:14px;">Student accounts are created by the admin. Use the username and password given to you by the school or exam administrator.</p>
+      <div class="info">No self-signup is available on this portal.</div>
     </div>
   </div>
 </div>
@@ -315,7 +321,7 @@ button:hover{transform:translateY(-1px)}
 </div>
 
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz55gzn_mfabvr7oD79sh6GcLZxuu7ByffV6nN5DzM42Ny9recRdW6u07cazPjDfTXbGQ/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGWwOrSMSieQ56AXszY_5RjO88ETNBqgIGaorpWfEEAUJ8g1GOBxtnH3LWl6SyVAUh/exec";
 async function loadSiteFavicon(){ try{ const u=new URL(APPS_SCRIPT_URL); u.searchParams.set('action','getPublicSiteContent'); u.searchParams.set('_ts',Date.now()); const res=await fetch(u.toString()); const json=await res.json(); const url=json && json.data && (json.data.siteFaviconUrl || json.data.resultBrandLogoUrl); if(url && document.getElementById('siteFavicon')) document.getElementById('siteFavicon').href=url; }catch(err){} }
 const TOKEN_KEY = "cbt_auth_token";
 const ROLE_KEY = "cbt_auth_role";
@@ -340,6 +346,8 @@ let audioStopPromise = null;
 let videoRecorder = null;
 let videoChunkIndex = 0;
 let videoStopPromise = null;
+let videoRecordingStream = null;
+let videoRecordingAudioStream = null;
 let screenStream = null;
 let screenRecorder = null;
 let screenChunkIndex = 0;
@@ -354,6 +362,8 @@ let violationToastTimer = null;
 let violationProgressTimer = null;
 let pendingViolationReason = "";
 let pendingViolationCount = 0;
+let lastAutosaveFingerprint = "";
+let lastAutosaveAt = 0;
 
 function showLoader(text = "Loading..."){ loaderText.textContent = text; loader.classList.add("show"); }
 function hideLoader(){ loader.classList.remove("show"); }
@@ -418,10 +428,15 @@ function populateFromSavedState(){
   return true;
 }
 
+function createNonce(){ return `${Date.now()}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`; }
 async function apiRequest(action, payload = null, method = "POST"){
   try{
     payload = payload || {};
     if (!payload.token && action !== "login" && action !== "signup") payload.token = getToken();
+    if (!["login","signup","validateSession","logout","checkResultPublic","checkResultPublicById","listPublishedResultsForStudent","getCurrentExamPublic","getPublicSiteContent"].includes(action)){
+      payload.timestamp = new Date().toISOString();
+      payload.nonce = createNonce();
+    }
 
     let response;
     if (method === "GET"){
@@ -494,19 +509,6 @@ async function showPortal(){
   if($("changePasswordBtn")) $("changePasswordBtn").classList.remove("hidden");
   await loadPublicState();
 }
-
-async function signupStudent(){
-  showLoader("Creating account...");
-  const res = await apiRequest("signup", {
-    fullName:$("signupFullName").value.trim(),
-    username:$("signupUsername").value.trim(),
-    password:$("signupPassword").value,
-    role:"student"
-  }, "POST");
-  hideLoader();
-  setStatus("signupStatus", res.message, res.ok);
-}
-
 async function loginStudent(){
   showLoader("Signing in...");
   const res = await apiRequest("login", {
@@ -836,13 +838,14 @@ async function uploadScreenBlob(blob, segmentLabel){
     regId: verifiedCandidate.regId,
     fullName: verifiedCandidate.fullName,
     mimeType: blob.type || pickScreenMimeType() || 'video/webm',
-    durationSeconds: 120,
+    durationSeconds: 60,
     segmentLabel: segmentLabel || ('clip_' + (++screenChunkIndex)),
     videoData
   }, 'POST');
 }
 
 async function startScreenMonitor(){
+  await ensureRequiredProctoringFolders();
   if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia){
     setStatus('unlockStatus', 'This browser does not support screen recording for this exam.');
     return false;
@@ -882,7 +885,7 @@ async function startScreenMonitor(){
     try{ if (event.data && event.data.size) await uploadScreenBlob(event.data, 'segment_' + (++screenChunkIndex)); }catch(err){}
   };
   try{
-    screenRecorder.start(120000);
+    screenRecorder.start(60000);
   }catch(error){
     setStatus('unlockStatus', 'Unable to begin screen recording.');
     try{ screenStream.getTracks().forEach(track => track.stop()); }catch(err){}
@@ -998,10 +1001,30 @@ async function stopMicrophoneMonitor(flush = false){
 
 function pickVideoMimeType(){
   if (window.MediaRecorder && MediaRecorder.isTypeSupported) {
-    const preferred = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'];
+    const preferred = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm;codecs=h264,opus','video/webm','video/mp4'];
     for (const type of preferred) if (MediaRecorder.isTypeSupported(type)) return type;
   }
   return '';
+}
+
+async function buildAudioVideoStream(){
+  if (!cameraStream) return null;
+  if (cameraStream.getAudioTracks && cameraStream.getAudioTracks().length) return cameraStream;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return cameraStream;
+  try{
+    const micStream = await navigator.mediaDevices.getUserMedia({
+      audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:true },
+      video:false
+    });
+    const combined = new MediaStream();
+    (cameraStream.getVideoTracks ? cameraStream.getVideoTracks() : []).forEach(track => combined.addTrack(track));
+    (micStream.getAudioTracks ? micStream.getAudioTracks() : []).forEach(track => combined.addTrack(track));
+    videoRecordingAudioStream = micStream;
+    return combined;
+  }catch(error){
+    setStatus('unlockStatus', 'Camera video will upload, but microphone audio could not be attached to the audio-video recording.');
+    return cameraStream;
+  }
 }
 
 async function uploadVideoBlob(blob, segmentLabel){
@@ -1031,15 +1054,19 @@ async function startVideoMonitor(){
     return false;
   }
   if (!window.MediaRecorder){
-    setStatus("unlockStatus", "This browser cannot record video for this exam.");
+    setStatus("unlockStatus", "This browser cannot record audio-video for this exam.");
     return false;
   }
   try{
+    videoRecordingStream = await buildAudioVideoStream();
     const mimeType = pickVideoMimeType();
-    videoRecorder = mimeType ? new MediaRecorder(cameraStream, { mimeType }) : new MediaRecorder(cameraStream);
+    videoRecorder = mimeType ? new MediaRecorder(videoRecordingStream, { mimeType }) : new MediaRecorder(videoRecordingStream);
   }catch(error){
-    setStatus("unlockStatus", "This browser could not start video recording.");
+    setStatus("unlockStatus", "This browser could not start audio-video recording.");
     videoRecorder = null;
+    videoRecordingStream = null;
+    if (videoRecordingAudioStream){ try{ videoRecordingAudioStream.getTracks().forEach(track => track.stop()); }catch(err){} }
+    videoRecordingAudioStream = null;
     return false;
   }
   videoChunkIndex = 0;
@@ -1051,8 +1078,11 @@ async function startVideoMonitor(){
   try{
     videoRecorder.start(120000);
   }catch(error){
-    setStatus("unlockStatus", "Unable to begin video recording.");
+    setStatus("unlockStatus", "Unable to begin audio-video recording.");
     videoRecorder = null;
+    videoRecordingStream = null;
+    if (videoRecordingAudioStream){ try{ videoRecordingAudioStream.getTracks().forEach(track => track.stop()); }catch(err){} }
+    videoRecordingAudioStream = null;
     return false;
   }
   return true;
@@ -1061,19 +1091,44 @@ async function startVideoMonitor(){
 async function stopVideoMonitor(flush = false){
   const recorder = videoRecorder;
   videoRecorder = null;
-  if (!recorder) return;
+  if (!recorder){
+    if (videoRecordingAudioStream){ try{ videoRecordingAudioStream.getTracks().forEach(track => track.stop()); }catch(err){} }
+    videoRecordingAudioStream = null;
+    videoRecordingStream = null;
+    return;
+  }
   videoStopPromise = new Promise(resolve => {
-    const finalize = () => resolve();
+    const finalize = () => {
+      if (videoRecordingAudioStream){ try{ videoRecordingAudioStream.getTracks().forEach(track => track.stop()); }catch(err){} }
+      videoRecordingAudioStream = null;
+      videoRecordingStream = null;
+      resolve();
+    };
     recorder.addEventListener("stop", finalize, { once:true });
   });
   try{
     if (flush && recorder.state === "recording") recorder.requestData();
   }catch(err){}
   try{
-    if (recorder.state !== "inactive") recorder.stop();
-  }catch(err){}
+    if (recorder.state !== "inactive") recorder.stop(); else if (videoRecordingAudioStream) videoRecordingAudioStream.getTracks().forEach(track => track.stop());
+  }catch(err){ if (videoRecordingAudioStream) videoRecordingAudioStream.getTracks().forEach(track => track.stop()); }
   await videoStopPromise;
   videoStopPromise = null;
+}
+
+async function ensureRequiredProctoringFolders(){
+  if(!verifiedCandidate) return;
+  const media = (pendingUnlockData && pendingUnlockData.response && pendingUnlockData.response.data) ? pendingUnlockData.response.data : (currentExamMedia || {});
+  try{
+    await apiRequest('ensureProctoringFolders', {
+      examCode: $('examCodeInput').value.trim(),
+      regId: verifiedCandidate.regId,
+      captureSnapshots: !!media.captureSnapshots,
+      recordAudio: !!media.recordAudio,
+      recordVideo: !!media.recordVideo,
+      recordScreen: !!media.recordScreen
+    }, 'POST');
+  }catch(err){}
 }
 
 async function startRequiredMedia(){
@@ -1082,6 +1137,7 @@ async function startRequiredMedia(){
   const needAudio = !!media.recordAudio;
   const needVideo = !!media.recordVideo;
   const needScreen = !!media.recordScreen;
+  await ensureRequiredProctoringFolders();
   if (needCamera){
     const cameraOk = await startCameraMonitor();
     if (!cameraOk) return false;
@@ -1145,7 +1201,7 @@ async function captureSnapshotAndUpload(){
 function startSnapshotTimer(){
   stopSnapshotTimer();
   if (!currentExamMedia.captureSnapshots) return;
-  snapshotTimer = setInterval(() => { captureSnapshotAndUpload(); }, 120000);
+  snapshotTimer = setInterval(() => { captureSnapshotAndUpload(); }, 180000);
   setTimeout(() => { captureSnapshotAndUpload(); }, 8000);
 }
 
@@ -1161,7 +1217,7 @@ function blockExamKeys(e){
   if (!examStarted) return;
   const key = (e.key || "").toLowerCase();
   const ctrlLike = e.ctrlKey || e.metaKey;
-  if (ctrlLike && ["c","v","x","a","s","p","u"].includes(key)){
+  if ((ctrlLike && ["c","v","x","a","s","p","u"].includes(key)) || key==="printscreen" || key==="f12"){
     e.preventDefault();
     showProctorAlert("Copy, paste, and shortcut actions are disabled during the exam.");
   }
@@ -1205,6 +1261,25 @@ function handleFocusReturn(){
   showPendingViolationIfAny();
 }
 
+
+function updateExamWatermark(){
+  const el=$("screenWatermark");
+  if(!el || !verifiedCandidate) return;
+  const examCode = $("examCodeInput") ? $("examCodeInput").value.trim() : '';
+  el.setAttribute('data-mark', `${verifiedCandidate.fullName || 'Candidate'}
+${verifiedCandidate.regId || ''}
+${examCode}`.trim());
+}
+async function ensureExamFullscreen(){
+  const root=document.documentElement;
+  if(document.fullscreenElement) return true;
+  try{ if(root.requestFullscreen) await root.requestFullscreen(); return !!document.fullscreenElement; }catch(err){ return false; }
+}
+function handleFullscreenChange(){
+  if(!examStarted) return;
+  if(!document.fullscreenElement) registerViolation('Fullscreen was exited');
+}
+
 function armExamProtection(restored = {}){
   protectionArmed = true;
   violationCount = Number(restored.violationCount || 0);
@@ -1213,6 +1288,8 @@ function armExamProtection(restored = {}){
   pendingViolationCount = Number(restored.pendingViolationCount || 0);
 
   document.body.classList.add("exam-protected");
+  updateExamWatermark();
+  ensureExamFullscreen();
   document.addEventListener("contextmenu", blockExamInteraction);
   document.addEventListener("copy", blockExamInteraction);
   document.addEventListener("cut", blockExamInteraction);
@@ -1221,6 +1298,7 @@ function armExamProtection(restored = {}){
   document.addEventListener("dragstart", blockExamInteraction);
   document.addEventListener("keydown", blockExamKeys);
   document.addEventListener("visibilitychange", handleVisibilityViolation);
+  document.addEventListener("fullscreenchange", handleFullscreenChange);
   window.addEventListener("blur", handleBlurViolation);
   window.addEventListener("focus", handleFocusReturn);
 }
@@ -1241,11 +1319,31 @@ function disarmExamProtection(){
   document.removeEventListener("dragstart", blockExamInteraction);
   document.removeEventListener("keydown", blockExamKeys);
   document.removeEventListener("visibilitychange", handleVisibilityViolation);
+  document.removeEventListener("fullscreenchange", handleFullscreenChange);
   window.removeEventListener("blur", handleBlurViolation);
   window.removeEventListener("focus", handleFocusReturn);
 
   clearProctorAlert();
   hideViolationFloat();
+}
+
+function buildAutosavePayload(){
+  return {
+    examCode:$("examCodeInput").value.trim(),
+    regId:verifiedCandidate ? verifiedCandidate.regId : "",
+    fullName:verifiedCandidate ? verifiedCandidate.fullName : "",
+    remainingSeconds:timeRemaining,
+    answers:collectAnswers()
+  };
+}
+
+function buildAutosaveFingerprint(payload){
+  return JSON.stringify({
+    examCode:payload.examCode || "",
+    regId:payload.regId || "",
+    remainingSeconds:Number(payload.remainingSeconds || 0),
+    answers:payload.answers || []
+  });
 }
 
 function startTimer(){
@@ -1264,22 +1362,25 @@ function startTimer(){
 
   autosaveTimer = setInterval(() => {
     autosaveProgress();
-  }, 15000);
+  }, 30000);
 }
 
-async function autosaveProgress(){
+async function autosaveProgress(force = false){
   if (!verifiedCandidate || !$("examCodeInput").value.trim()) return;
   saveStudentState(snapshotLocalExamState());
 
   if (!examStarted) return;
 
-  await apiRequest("autosaveProgress", {
-    examCode:$("examCodeInput").value.trim(),
-    regId:verifiedCandidate.regId,
-    fullName:verifiedCandidate.fullName,
-    remainingSeconds:timeRemaining,
-    answers:collectAnswers()
-  }, "POST");
+  const payload = buildAutosavePayload();
+  const fingerprint = buildAutosaveFingerprint(payload);
+  const now = Date.now();
+  if (!force && fingerprint === lastAutosaveFingerprint && (now - lastAutosaveAt) < 120000) return;
+
+  const res = await apiRequest("autosaveProgress", payload, "POST");
+  if (res && res.ok){
+    lastAutosaveFingerprint = fingerprint;
+    lastAutosaveAt = now;
+  }
 }
 
 async function resumeSavedProgress(examCode){
@@ -1538,10 +1639,9 @@ async function logoutCurrent(){
 
 window.addEventListener("beforeunload", function(){
   saveStudentState(snapshotLocalExamState());
-  autosaveProgress();
+  autosaveProgress(true);
 });
 
-$("signupBtn").addEventListener("click", signupStudent);
 $("loginBtn").addEventListener("click", loginStudent);
 $("forgotBtn").addEventListener("click", forgotStudentPassword);
 $("changePasswordBtn").addEventListener("click", changeOwnStudentPassword);

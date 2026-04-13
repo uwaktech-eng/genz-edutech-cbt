@@ -34,17 +34,20 @@
   </div>
   <script src="site-common.js"></script>
   <script>
-  
-      (async function(){
-        const data = await getPublicSiteContent();
+      function applyStaticPageContent(data){
         setSiteFavicon(data.siteFaviconUrl || data.resultBrandLogoUrl);
         renderBrand(document.getElementById('brandMark'), data);
         document.getElementById('brandName').textContent = data.resultBrandName || 'Genz CBT Pro';
         document.getElementById('pageTitle').textContent = 'Cookies Policy';
         document.getElementById('pageIntro').innerHTML = nl2br(data.cookiesContent || 'Add this content in admin settings.');
         renderFooter(data);
+      }
+      (async function(){
+        const cached = getCachedPublicSiteContent();
+        if(cached && Object.keys(cached).length) applyStaticPageContent(cached);
+        const data = await getPublicSiteContent({ preferFresh: !Object.keys(cached || {}).length, onFresh: (fresh, changed) => { if(changed) applyStaticPageContent(fresh); } });
+        applyStaticPageContent(data);
       })();
-    
   </script>
 </body>
 </html>

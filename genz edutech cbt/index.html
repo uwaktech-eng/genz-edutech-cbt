@@ -90,47 +90,61 @@
 
   <script src="site-common.js"></script>
   <script>
-    function renderCards(list, rootId, kind){
-      const root = document.getElementById(rootId);
+    function renderCards(list, targetId, label){
+      const root = document.getElementById(targetId);
       if(!root) return;
-      const safe = safeList(list, []);
-      if(!safe.length){
-        root.innerHTML = `<div class="card"><h3>No ${kind} added yet</h3><p>Add ${kind} from the admin portal settings to display them here.</p></div>`;
-        return;
-      }
-      root.innerHTML = safe.map(item => {
-        const media = cardMedia(item, kind);
-        const extra = item.videoUrl ? `<a class="embed-link" href="${escHtml(item.videoUrl)}" target="_blank" rel="noopener">Open video ↗</a>` : '';
-        return `<article class="card">${media}<h3>${escHtml(item.name || item.title || kind)}</h3><div class="muted" style="margin-bottom:8px">${escHtml(item.role || item.location || '')}</div><p>${escHtml(item.bio || item.quote || item.description || '')}</p>${extra}</article>`;
-      }).join('');
+      const items = safeList(list, []);
+      root.innerHTML = items.length ? items.map(item => `
+        <article class="card">
+          ${cardMedia(item, label)}
+          <h3>${escHtml(item.name || item.title || 'Untitled')}</h3>
+          <div class="muted" style="margin-bottom:10px">${escHtml(item.role || item.subtitle || '')}</div>
+          <p>${escHtml(item.bio || item.text || item.description || '')}</p>
+        </article>`).join('') : `<div class="card"><h3>No ${escHtml(label)}</h3><p>Add content from the admin portal.</p></div>`;
     }
 
     function renderInstitutions(list){
       const root = document.getElementById('institutionsGrid');
-      const safe = safeList(list, []);
-      if(!safe.length){ root.innerHTML = '<div class="logo-card">Add institutions and logos from the admin portal settings.</div>'; return; }
-      root.innerHTML = safe.map(item => `<div class="logo-card">${item.logoUrl ? `<img src="${escHtml(item.logoUrl)}" alt="${escHtml(item.name||'Institution')}">` : '<div class="media-thumb" style="height:72px;display:grid;place-items:center;margin-bottom:12px">Logo</div>'}<strong>${escHtml(item.name || 'Institution')}</strong><div class="muted" style="margin-top:6px">${escHtml(item.location || '')}</div></div>`).join('');
+      const items = safeList(list, []);
+      root.innerHTML = items.length ? items.map(item => `
+        <article class="card">
+          ${cardMedia(item, 'Institution')}
+          <h3>${escHtml(item.name || 'Institution')}</h3>
+          <p>${escHtml(item.description || item.note || '')}</p>
+        </article>`).join('') : '<div class="card"><h3>No institutions added yet</h3><p>Add partner schools and institutions from the admin portal settings.</p></div>';
+    }
+
+    function applyLandingContent(data){
+      const safe = data || {};
+      warmPublicSiteAssets(safe);
+      setSiteFavicon(safe.siteFaviconUrl || safe.resultBrandLogoUrl);
+      renderBrand(document.getElementById('brandMark'), safe);
+      document.getElementById('brandName').textContent = safe.resultBrandName || 'Genz CBT Pro';
+      document.getElementById('heroBadge').textContent = safe.siteHeroBadge || 'Trusted digital assessment experience';
+      document.getElementById('heroTitle').textContent = safe.siteHeroTitle || 'Genz CBT Pro';
+      document.getElementById('heroSubtitle').textContent = safe.siteHeroSubtitle || 'A modern CBT and result platform for schools, tutorial centres, and institutions.';
+      document.getElementById('aboutTitle').textContent = safe.siteAboutTitle || 'About Genz CBT Pro';
+      document.getElementById('aboutText').innerHTML = nl2br(safe.siteAboutText || 'Genz CBT Pro helps schools run secure exams, manage results, and present professional report slips online.');
+      document.getElementById('ceoName').textContent = safe.ceoName || 'CEO, Genz EduTech Innovations';
+      document.getElementById('ceoTitle').textContent = safe.ceoTitle || 'Founder & Chief Executive Officer';
+      document.getElementById('ceoBio').innerHTML = nl2br(safe.ceoBio || 'Add the CEO biography from the admin portal settings.');
+      const img=document.getElementById('ceoPhoto');
+      if(safe.ceoImageUrl){ bindPublicImage(img, safe.ceoImageUrl, 'eager'); } else if(img){ img.style.display='none'; }
+      renderCards(safe.contributors, 'contributorsGrid', 'contributors');
+      renderInstitutions(safe.institutions);
+      renderCards(safe.testimonials, 'testimonialsGrid', 'testimonials');
+      renderCards(safe.tutorialVideos, 'tutorialsGrid', 'tutorial videos');
+      renderFooter(safe);
     }
 
     (async function(){
-      const data = await getPublicSiteContent();
-      setSiteFavicon(data.siteFaviconUrl || data.resultBrandLogoUrl);
-      renderBrand(document.getElementById('brandMark'), data);
-      document.getElementById('brandName').textContent = data.resultBrandName || 'Genz CBT Pro';
-      document.getElementById('heroBadge').textContent = data.siteHeroBadge || 'Trusted digital assessment experience';
-      document.getElementById('heroTitle').textContent = data.siteHeroTitle || 'Genz CBT Pro';
-      document.getElementById('heroSubtitle').textContent = data.siteHeroSubtitle || 'A modern CBT and result platform for schools, tutorial centres, and institutions.';
-      document.getElementById('aboutTitle').textContent = data.siteAboutTitle || 'About Genz CBT Pro';
-      document.getElementById('aboutText').innerHTML = nl2br(data.siteAboutText || 'Genz CBT Pro helps schools run secure exams, manage results, and present professional report slips online.');
-      document.getElementById('ceoName').textContent = data.ceoName || 'CEO, Genz EduTech Innovations';
-      document.getElementById('ceoTitle').textContent = data.ceoTitle || 'Founder & Chief Executive Officer';
-      document.getElementById('ceoBio').innerHTML = nl2br(data.ceoBio || 'Add the CEO biography from the admin portal settings.');
-      if(data.ceoImageUrl){ const img=document.getElementById('ceoPhoto'); img.src=data.ceoImageUrl; img.style.display='block'; }
-      renderCards(data.contributors, 'contributorsGrid', 'contributors');
-      renderInstitutions(data.institutions);
-      renderCards(data.testimonials, 'testimonialsGrid', 'testimonials');
-      renderCards(data.tutorialVideos, 'tutorialsGrid', 'tutorial videos');
-      renderFooter(data);
+      const cached = getCachedPublicSiteContent();
+      if(cached && Object.keys(cached).length) applyLandingContent(cached);
+      const data = await getPublicSiteContent({
+        preferFresh: !Object.keys(cached || {}).length,
+        onFresh: (fresh, changed) => { if(changed) applyLandingContent(fresh); }
+      });
+      applyLandingContent(data);
     })();
   </script>
 </body>

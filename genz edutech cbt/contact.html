@@ -41,22 +41,23 @@
   </div>
   <script src="site-common.js"></script>
   <script>
-  
-      (async function(){
-        const data = await getPublicSiteContent();
+      function applyContactContent(data){
         setSiteFavicon(data.siteFaviconUrl || data.resultBrandLogoUrl);
         renderBrand(document.getElementById('brandMark'), data);
         document.getElementById('brandName').textContent = data.resultBrandName || 'Genz CBT Pro';
         document.getElementById('pageTitle').textContent = 'Contact';
-        
         document.getElementById('pageIntro').innerHTML = 'Stay connected with <strong>' + escHtml(data.resultBrandName || 'Genz CBT Pro') + '</strong> for support, onboarding, and partnership enquiries.';
         document.getElementById('contactEmail').innerHTML = data.contactEmail ? `<a href="mailto:${escHtml(data.contactEmail)}">${escHtml(data.contactEmail)}</a>` : 'Add your email in admin settings.';
         document.getElementById('contactPhone').textContent = data.contactPhone || 'Add your phone in admin settings.';
         document.getElementById('contactAddress').innerHTML = nl2br(data.contactAddress || 'Add your address in admin settings.');
-        
         renderFooter(data);
+      }
+      (async function(){
+        const cached = getCachedPublicSiteContent();
+        if(cached && Object.keys(cached).length) applyContactContent(cached);
+        const data = await getPublicSiteContent({ preferFresh: !Object.keys(cached || {}).length, onFresh: (fresh, changed) => { if(changed) applyContactContent(fresh); } });
+        applyContactContent(data);
       })();
-    
   </script>
 </body>
 </html>

@@ -4,6 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>CBT Admin Dashboard</title>
+<script>
+(function(){
+  try{
+    if(window.top !== window.self){
+      document.documentElement.style.display = 'none';
+      window.top.location = window.self.location.href;
+    }
+  }catch(err){
+    try{ window.location = window.self.location.href; }catch(e){}
+  }
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 <style>
@@ -82,6 +94,7 @@ button[disabled]{transform:none!important;box-shadow:none!important}
 .dashboard-banner .actions .ghost:hover{background:rgba(255,255,255,.2)}
 .quick-pills{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
 .quick-pills .pill{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.18);color:#fff}
+.mini-note{font-size:12px;color:var(--muted);margin-top:-6px;margin-bottom:10px}.file-link-box{padding:10px 12px;border:1px dashed var(--line);border-radius:14px;background:rgba(255,255,255,.55);word-break:break-all}.stack{display:grid;gap:10px}.tag{display:inline-flex;padding:4px 10px;border-radius:999px;background:#eef4ff;color:#2553a7;font-size:12px;font-weight:700;border:1px solid rgba(79,140,255,.18)}
 @media (max-width:520px){.card-head{padding:14px 16px}.card-body{padding:16px}}
 
 </style>
@@ -181,6 +194,12 @@ button[disabled]{transform:none!important;box-shadow:none!important}
           <label>Set / Update Subadmin Action Token</label><input id="subadminActionTokenNew" type="password" placeholder="Enter token for subadmins">
           <label>Confirm Subadmin Action Token</label><input id="subadminActionTokenConfirm" type="password" placeholder="Re-enter token">
           <label>Subadmin Token Session Expiry (Minutes)</label><input id="subadminTokenTtlMinutes" type="number" min="5" max="1440" value="60">
+        <div class="row"><div><label>Request Freshness Window (Seconds)</label><input id="requestFreshnessWindowSeconds" type="number" min="60" max="600" value="180"></div><div><label>Snapshot Interval (Seconds)</label><input id="examSnapshotIntervalSeconds" type="number" min="60" max="900" value="180"></div></div>
+        <div class="row"><div><label>Max Upload Size (MB)</label><input id="maxUploadSizeMb" type="number" min="1" max="100" value="8"></div><div><label>Bulk Email Batch Size</label><input id="bulkEmailBatchSize" type="number" min="1" max="50" value="20"></div></div>
+        <div class="row"><div><label>Bulk Email Max Recipients / Send</label><input id="bulkEmailMaxRecipientsPerSend" type="number" min="1" max="500" value="150"></div><div></div></div>
+        <label><input id="driveBackupCsvUploads" type="checkbox"> Save CSV backups to Drive</label>
+        <label><input id="driveBackupResultsExports" type="checkbox" checked> Save result exports to Drive</label>
+        <label><input id="defaultFileDownloadable" type="checkbox" checked> Managed files are downloadable by default</label>
           <button class="warn" id="saveSubadminTokenBtn" type="button">Save Subadmin Token</button>
         </div>
         <div id="subadminTokenPanel" class="role-panel hidden" style="margin:8px 0 12px">
@@ -205,9 +224,9 @@ button[disabled]{transform:none!important;box-shadow:none!important}
           <div><label><input id="examShuffleQuestions" type="checkbox"> Shuffle questions for each student</label></div>
         </div>
         <div class="row">
-          <div><label><input id="examCaptureSnapshots" type="checkbox" checked> Upload snapshots to Drive</label></div>
+          <div><label><input id="examCaptureSnapshots" type="checkbox"> Upload snapshots to Drive</label></div>
           <div><label><input id="examRecordAudio" type="checkbox"> Upload audio to Drive</label></div>
-          <div><label><input id="examRecordVideo" type="checkbox"> Upload video to Drive</label></div>
+          <div><label><input id="examRecordVideo" type="checkbox"> Upload audio-video to Drive</label></div>
           <div><label><input id="examRecordScreen" type="checkbox"> Upload screen recording to Drive</label></div>
         </div>
         <div class="row">
@@ -231,7 +250,7 @@ button[disabled]{transform:none!important;box-shadow:none!important}
         <div class="row">
           <div><label><input id="configCaptureSnapshots" type="checkbox"> Upload snapshots to Drive</label></div>
           <div><label><input id="configRecordAudio" type="checkbox"> Upload audio to Drive</label></div>
-          <div><label><input id="configRecordVideo" type="checkbox"> Upload video to Drive</label></div>
+          <div><label><input id="configRecordVideo" type="checkbox"> Upload audio-video to Drive</label></div>
           <div><label><input id="configRecordScreen" type="checkbox"> Upload screen recording to Drive</label></div>
         </div>
         <label>Pass Mark (%)</label>
@@ -282,13 +301,13 @@ button[disabled]{transform:none!important;box-shadow:none!important}
           <div><label>Full Name</label><input id="candidateName" type="text"></div>
           <div><label>Reg ID</label><input id="candidateRegId" type="text"></div>
         </div>
-        <label>Student Passport Image URL (optional)</label><input id="candidatePassportUrl" type="text" placeholder="Paste student passport image link">
+        <label>Student Image URL (optional)</label><input id="candidatePassportUrl" type="text" placeholder="Paste student image link or upload below">
         <div class="actions">
           <button class="primary" id="addCandidateBtn" type="button">Add Candidate</button>
         </div>
         <label>Import Candidates CSV</label>
         <input id="candidateCsvFile" type="file" accept=".csv">
-        <div class="muted" style="margin-top:-4px;margin-bottom:8px">Headers: <b>fullName,regId,passportUrl</b> <span style="opacity:.75">(passportUrl is optional)</span></div>
+        <div class="muted" style="margin-top:-4px;margin-bottom:8px">Headers: <b>fullName,regId,imageUrl</b> <span style="opacity:.75">(imageUrl is optional. passportUrl also works. You can also paste a Google Drive file ID or public image link.)</span></div>
         <div class="actions">
           <button class="ghost" id="importCandidatesBtn" type="button">Import Candidates CSV</button>
           <button class="ghost" id="downloadCandidatesTemplateBtn" type="button">Download Student CSV Template</button>
@@ -353,7 +372,7 @@ button[disabled]{transform:none!important;box-shadow:none!important}
         <div class="muted" style="margin:-2px 0 10px">Question CSV headers: <b>question,imageUrl,optionA,optionB,optionC,optionD,answer</b></div>
         <input id="questionEditId" type="hidden">
         <label>Question</label><textarea id="questionText"></textarea>
-        <label>Image URL (optional)</label><input id="imageUrl" type="text" placeholder="Paste direct image URL">
+        <label>Image URL (optional)</label><input id="imageUrl" type="text" placeholder="Paste direct image URL or upload below">
         <div class="row">
           <div><label>Option A</label><input id="optionA" type="text"></div>
           <div><label>Option B</label><input id="optionB" type="text"></div>
@@ -446,7 +465,41 @@ button[disabled]{transform:none!important;box-shadow:none!important}
         </div>
         <div class="row">
           <div><h3 style="margin-bottom:10px">Principal Admins & Subadmins</h3><div id="adminsBox"></div></div>
-          <div><h3 style="margin-bottom:10px">Students</h3><div id="studentsBox"></div></div>
+          <div>
+            <div class="actions" style="justify-content:space-between;align-items:center;margin-bottom:10px">
+              <h3 style="margin:0">Students</h3>
+              <div class="actions">
+                <button class="ghost small-btn" id="toggleAllStudentsBtn" type="button">Select / Unselect All</button>
+                <button class="small-btn success" id="activateSelectedStudentsBtn" type="button">Activate Selected</button>
+                <button class="small-btn warn" id="deactivateSelectedStudentsBtn" type="button">Deactivate Selected</button>
+                <button class="small-btn" id="resetPasswordSelectedStudentsBtn" type="button">Reset Passwords</button>
+                <button class="small-btn danger" id="deleteSelectedStudentsBtn" type="button">Delete Selected</button>
+                <button class="small-btn success" id="restoreSelectedStudentsBtn" type="button">Restore Selected</button>
+                <button class="small-btn danger" id="hardDeleteSelectedStudentsBtn" type="button">Delete Forever</button>
+              </div>
+            </div>
+            <div class="mini-note" id="studentsSelectionInfo">0 selected student(s).</div>
+            <div id="studentsBox"></div>
+            <div class="card hidden" id="studentEditorCard" style="margin-top:14px">
+              <div class="actions" style="justify-content:space-between;align-items:center">
+                <h3 style="margin:0">Edit Student Details</h3>
+                <button class="ghost small-btn" id="cancelStudentEditorBtn" type="button">Close</button>
+              </div>
+              <input id="studentEditorOriginalUsername" type="hidden">
+              <div class="row">
+                <div><label>Full Name</label><input id="studentEditorFullName" type="text" placeholder="Enter full name"></div>
+                <div><label>Username</label><input id="studentEditorUsername" type="text" placeholder="Enter username"></div>
+              </div>
+              <div class="row">
+                <div><label>Registration ID</label><input id="studentEditorRegId" type="text" placeholder="Enter registration ID"></div>
+                <div><label>Student Image URL</label><input id="studentEditorPassportUrl" type="text" placeholder="Paste image link or upload below"></div>
+              </div>
+              <div id="studentEditorStatus" class="status"></div>
+              <div class="actions">
+                <button class="success" id="saveStudentEditorBtn" type="button">Save Student Details</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -514,17 +567,54 @@ button[disabled]{transform:none!important;box-shadow:none!important}
           <div id="screenBox"></div>
         </div>
       </div>
+      <div class="card">
+        <h2>Principal Bulk Email</h2>
+        <div class="info" style="margin:10px 0 14px">Quota-friendly mode sends in BCC batches. Keep recipient lists moderate to reduce mail quota use.</div>
+        <label>Manual Emails</label><textarea id="bulkEmailManual" placeholder="Paste emails separated by commas, spaces, or new lines"></textarea>
+        <label>Upload CSV of Emails</label><input id="bulkEmailCsvFile" type="file" accept=".csv" style="display:none"><div class="actions"><button class="ghost" id="chooseBulkEmailCsvBtn" type="button">Import CSV</button><button class="ghost" id="downloadBulkEmailTemplateBtn" type="button">Download Email CSV Template</button><span id="bulkEmailCsvName" class="mini-note">No CSV selected yet.</span></div>
+        <label>Subject</label><input id="bulkEmailSubject" type="text" placeholder="Email subject">
+        <label>Message</label><textarea id="bulkEmailBody" placeholder="Type the email message here"></textarea>
+        <div class="actions">
+          <button class="primary" id="sendBulkEmailBtn" type="button">Send Bulk Email</button>
+        </div>
+        <div id="bulkEmailStatus" class="status"></div>
+      </div>
+
+      <div class="card full">
+        <h2>Managed File Hosting</h2>
+        <div class="info" style="margin:10px 0 14px">Upload files to Drive once, then reuse the generated embed/view link anywhere. To reduce quota use, keep uploads compressed and avoid unnecessary duplicates.</div>
+        <div class="row">
+          <div><label>Select File</label><input id="managedFileInput" type="file"></div>
+          <div><label><input id="managedFileDownloadable" type="checkbox" checked> Allow download link</label><div class="mini-note">When turned off, the app hides the direct download link. Drive owners can still change sharing later inside Drive.</div></div>
+        </div>
+        <div class="actions">
+          <button class="primary" id="uploadManagedFileBtn" type="button">Upload File</button>
+          <button class="ghost" id="reimportDriveFilesBtn" type="button">Reimport Drive Files</button>
+          <button class="ghost" id="refreshManagedFilesBtn" type="button">Refresh Files</button>
+          <button class="ghost small-btn" id="toggleAllManagedFilesBtn" type="button">Select / Unselect All</button>
+          <button class="small-btn" id="enableDownloadSelectedManagedFilesBtn" type="button">Enable Download</button>
+          <button class="small-btn warn" id="disableDownloadSelectedManagedFilesBtn" type="button">Disable Download</button>
+          <button class="small-btn danger" id="deleteSelectedManagedFilesBtn" type="button">Delete Selected</button>
+          <button class="small-btn success" id="restoreSelectedManagedFilesBtn" type="button">Restore Selected</button>
+          <button class="small-btn danger" id="hardDeleteSelectedManagedFilesBtn" type="button">Delete Forever</button>
+        </div>
+        <div id="managedFileStatus" class="status"></div>
+        <div class="mini-note" id="managedFilesSelectionInfo">0 selected managed file(s).</div>
+        <div id="managedFileLatest" class="stack" style="margin-top:12px"></div>
+        <div class="table-wrap" id="managedFilesBox" style="margin-top:14px"></div>
+      </div>
+
     </div>
   </div>
 </section>
 
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz55gzn_mfabvr7oD79sh6GcLZxuu7ByffV6nN5DzM42Ny9recRdW6u07cazPjDfTXbGQ/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGWwOrSMSieQ56AXszY_5RjO88ETNBqgIGaorpWfEEAUJ8g1GOBxtnH3LWl6SyVAUh/exec";
 const ADMIN_TOKEN_KEY = "cbt_admin_token_v2";
 const SUBADMIN_ACTION_SESSION_KEY = "cbt_subadmin_action_session_v2";
 const SUBADMIN_ACTION_SESSION_EXP_KEY = "cbt_subadmin_action_session_exp_v2";
 const SUBADMIN_TOKEN_ACTIONS = new Set([
-  "saveSettings","createExam","setExamOptions","setExamActive","archiveExam","deleteExam","restoreExam","hardDeleteExam","bulkHardDeleteExams","setExamLock","duplicateExam",
+  "saveSettings","uploadBrandingImage","createExam","setExamOptions","setExamActive","archiveExam","deleteExam","restoreExam","hardDeleteExam","bulkHardDeleteExams","setExamLock","duplicateExam",
   "addCandidate","importCandidates","generateStudentAccounts","setUserActive","deleteUser","restoreUser","hardDeleteUser","adminResetUserPassword",
   "addQuestion","updateQuestionByExam","deleteQuestionByExam","restoreQuestionByExam","hardDeleteQuestionByExam","importQuestions","clearQuestionsByExam","bulkDeleteQuestionsByExam","bulkRestoreQuestionsByExam","bulkHardDeleteQuestionsByExam",
   "createPermissionCode","deletePermissionCode","clearPermissionCodes",
@@ -532,12 +622,14 @@ const SUBADMIN_TOKEN_ACTIONS = new Set([
   "deleteSnapshot","restoreSnapshot","hardDeleteSnapshot","bulkDeleteSnapshots","bulkRestoreSnapshots","bulkHardDeleteSnapshots"
 ]);
 
-let examsData=[], questionsData=[], resultsData=[], candidatesData=[], adminsData=[], studentsData=[], snapshotsData=[], audioData=[], videosData=[], lastGeneratedCsv="", lastGeneratedFilename="student_passwords.csv";
+let examsData=[], questionsData=[], resultsData=[], candidatesData=[], adminsData=[], studentsData=[], snapshotsData=[], audioData=[], videosData=[], screenData=[], managedFilesData=[], lastGeneratedCsv="", lastGeneratedFilename="student_passwords.csv";
 let currentAdminRole = "";
 let selectedQuestionIds = new Set();
 let selectedDeletedExamCodes = new Set();
 let selectedResultIds = new Set();
 let selectedSnapshotIds = new Set();
+let selectedManagedFileIds = new Set();
+let selectedStudentUsernames = new Set();
 
 let collapsibleCardsReady = false;
 function getCardSummary_(title){
@@ -682,13 +774,203 @@ function getEffectiveAdminRole(){ return (currentAdminRole || getStoredAdminRole
 function setAuth(data){ localStorage.setItem(ADMIN_TOKEN_KEY, data.token); if(data && data.role){ currentAdminRole = data.role; localStorage.setItem(ADMIN_TOKEN_KEY + "_role", data.role); } }
 function clearAuth(){ localStorage.removeItem(ADMIN_TOKEN_KEY); localStorage.removeItem(ADMIN_TOKEN_KEY + "_role"); clearSubadminActionToken(); currentAdminRole = ""; }
 function esc(v){ return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
-function setFavicon(url){ const el = document.getElementById('siteFavicon'); if(el && url) el.href = url; }
+function setFavicon(url){ const el = document.getElementById('siteFavicon'); if(el && url) el.href = normalizeDisplayImageUrl(url); }
 function readableDateTime(value){ if(!value) return ''; const d=new Date(value); return isFinite(d.getTime()) ? d.toLocaleString() : value; }
+function unwrapImageInput(url){
+  const raw = String(url || '').trim();
+  if(!raw) return '';
+  let m = raw.match(/<img\b[^>]*\bsrc\s*=\s*(["'])(.*?)\1/i);
+  if(!m) m = raw.match(/<img\b[^>]*\bsrc\s*=\s*([^\s>]+)/i);
+  if(m) return String(m[2] || m[1] || '').trim();
+  m = raw.match(/url\(\s*(["']?)(.*?)\1\s*\)/i);
+  if(m && m[2]) return String(m[2]).trim();
+  return raw;
+}
+function normalizeDisplayImageUrl(url){
+  const raw = unwrapImageInput(url);
+  if(!raw) return '';
+  let m = raw.match(/drive\.google\.com\/file\/d\/([^\/]+)/i);
+  if(!m) m = raw.match(/drive\.google\.com\/open\?id=([^&]+)/i);
+  if(!m) m = raw.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
+  if(!m) m = raw.match(/uc\?export=(?:view|download)&id=([a-zA-Z0-9_-]+)/i);
+  if(!m) m = raw.match(/thumbnail\?[^#]*id=([a-zA-Z0-9_-]+)/i);
+  if(!m) m = raw.match(/drive\.usercontent\.google\.com\/(?:download|u\/\d+\/uc)\?[^#]*id=([a-zA-Z0-9_-]+)/i);
+  if(!m && /^[A-Za-z0-9_-]{20,}$/.test(raw)) m = [raw, raw];
+  if(m && m[1]) return `https://drive.google.com/thumbnail?id=${m[1]}&sz=w2000`;
+  if(/dropbox\.com/i.test(raw)){
+    let next = raw.replace(/\?dl=0$/i,'?raw=1').replace(/\?dl=1$/i,'?raw=1');
+    if(!/[?&]raw=1/i.test(next)) next += (next.includes('?') ? '&' : '?') + 'raw=1';
+    return next;
+  }
+  m = raw.match(/^https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)$/i);
+  if(m) return `https://raw.githubusercontent.com/${m[1]}/${m[2]}/${m[3]}/${m[4]}`;
+  if(/^https:\/\/1drv\.ms\//i.test(raw)){
+    try{ return `https://api.onedrive.com/v1.0/shares/u!${btoa(raw).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}/root/content`; }catch(err){}
+  }
+  return raw;
+}
+function attachImageUrlNormalizer(inputId){
+  const input = $(inputId);
+  if(!input) return;
+  let note = document.getElementById(inputId + 'Note');
+  if(!note){
+    note = document.createElement('div');
+    note.className = 'mini-note';
+    note.id = inputId + 'Note';
+    input.insertAdjacentElement('afterend', note);
+  }
+  let preview = document.getElementById(inputId + 'Preview');
+  if(!preview){
+    preview = document.createElement('div');
+    preview.className = 'mini-note';
+    preview.id = inputId + 'Preview';
+    preview.style.marginTop = '8px';
+    input.insertAdjacentElement('afterend', preview);
+  }
+  const sync = () => {
+    const normalized = normalizeDisplayImageUrl(input.value);
+    note.textContent = normalized ? `Display-ready image link: ${normalized}` : 'Paste a plain image URL, an <img src="..."> tag, or CSS url(...). Only the image source will be used and converted where possible.';
+    if(normalized){
+      preview.innerHTML = `<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><img src="${esc(normalized)}" alt="Preview" referrerpolicy="no-referrer" loading="lazy" style="width:72px;height:72px;object-fit:cover;border-radius:12px;border:1px solid var(--line);background:#fff" onerror="this.style.display='none'"><a href="${esc(normalized)}" target="_blank" rel="noopener">Open image preview</a></div>`;
+    }else{
+      preview.innerHTML = '';
+    }
+  };
+  input.addEventListener('input', sync);
+  input.addEventListener('blur', () => {
+    const normalized = normalizeDisplayImageUrl(input.value);
+    if(normalized) input.value = normalized;
+    sync();
+  });
+  sync();
+}
 
+function refreshImageInputUi(inputId){
+  const input = $(inputId);
+  if(!input) return;
+  input.dispatchEvent(new Event('input', { bubbles:true }));
+}
+
+function attachBrandingImageUploader(inputId, targetKey, label){
+  const input = $(inputId);
+  if(!input) return;
+  const preview = document.getElementById(inputId + 'Preview') || document.getElementById(inputId + 'Note') || input;
+  let wrap = document.getElementById(inputId + 'UploadWrap');
+  if(!wrap){
+    wrap = document.createElement('div');
+    wrap.id = inputId + 'UploadWrap';
+    wrap.style.marginTop = '8px';
+    preview.insertAdjacentElement('afterend', wrap);
+  }
+  wrap.innerHTML = `
+    <div class="actions" style="gap:8px;align-items:center">
+      <input id="${inputId}UploadFile" type="file" accept="image/*,.ico" style="display:none">
+      <button class="ghost" id="${inputId}UploadBtn" type="button">Upload ${esc(label)} to My Drive</button>
+      <span class="mini-note" id="${inputId}UploadStatus">Upload directly into your Google Drive. The setting updates immediately after upload.</span>
+    </div>
+  `;
+  const fileInput = document.getElementById(inputId + 'UploadFile');
+  const button = document.getElementById(inputId + 'UploadBtn');
+  const status = document.getElementById(inputId + 'UploadStatus');
+  button.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files && fileInput.files[0];
+    if(!file) return;
+    status.textContent = `Uploading ${file.name} to your Drive...`;
+    button.disabled = true;
+    showLoader(`Uploading ${label.toLowerCase()}...`);
+    try{
+      const payload = await fileToDataObject(file);
+      const res = await apiRequest("uploadBrandingImage", Object.assign({}, payload, { targetKey }));
+      if(res.ok && res.data){
+        input.value = normalizeDisplayImageUrl(res.data.savedUrl || res.data.thumbnailUrl || res.data.viewUrl || '');
+        refreshImageInputUi(inputId);
+        if(inputId === 'siteFaviconUrl' || inputId === 'resultBrandLogoUrl') setFavicon(input.value || ($("siteFaviconUrl")?.value || $("resultBrandLogoUrl")?.value || ''));
+        try{ localStorage.removeItem('genz_cbt_public_site_content_v1'); }catch(err){}
+        try{ localStorage.setItem('genz_cbt_public_site_bust_v1', String(Date.now())); }catch(err){}
+        status.textContent = `Uploaded to Drive successfully. File ID: ${res.data.fileId}`;
+        setStatus('settingsStatus', res.message, true);
+      }else{
+        status.textContent = res.message || 'Upload failed.';
+        setStatus('settingsStatus', res.message || 'Upload failed.');
+      }
+    }catch(err){
+      const msg = err && err.message ? err.message : 'Upload failed.';
+      status.textContent = msg;
+      setStatus('settingsStatus', msg);
+    }finally{
+      hideLoader();
+      button.disabled = false;
+      fileInput.value = '';
+    }
+  });
+}
+
+
+function attachDriveImageUploader(inputId, options){
+  const input = $(inputId);
+  if(!input || !options || !options.action) return;
+  const preview = document.getElementById(inputId + 'Preview') || document.getElementById(inputId + 'Note') || input;
+  let wrap = document.getElementById(inputId + 'DriveUploadWrap');
+  if(!wrap){
+    wrap = document.createElement('div');
+    wrap.id = inputId + 'DriveUploadWrap';
+    wrap.style.marginTop = '8px';
+    preview.insertAdjacentElement('afterend', wrap);
+  }
+  const label = options.label || 'Image';
+  wrap.innerHTML = `
+    <div class="actions" style="gap:8px;align-items:center;flex-wrap:wrap">
+      <input id="${inputId}DriveUploadFile" type="file" accept="image/*,.ico" style="display:none">
+      <button class="ghost" id="${inputId}DriveUploadBtn" type="button">Upload ${esc(label)} to My Drive</button>
+      <span class="mini-note" id="${inputId}DriveUploadStatus">Upload this image directly into your Google Drive and fill this field automatically.</span>
+    </div>
+  `;
+  const fileInput = document.getElementById(inputId + 'DriveUploadFile');
+  const button = document.getElementById(inputId + 'DriveUploadBtn');
+  const status = document.getElementById(inputId + 'DriveUploadStatus');
+  button.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files && fileInput.files[0];
+    if(!file) return;
+    button.disabled = true;
+    status.textContent = `Uploading ${file.name} to your Drive...`;
+    showLoader(`Uploading ${label.toLowerCase()}...`);
+    try{
+      const payload = await fileToDataObject(file);
+      const extra = typeof options.buildPayload === 'function' ? (options.buildPayload() || {}) : {};
+      const res = await apiRequest(options.action, Object.assign({}, payload, extra), 'POST');
+      if(res.ok && res.data){
+        input.value = normalizeDisplayImageUrl(res.data.savedUrl || res.data.viewUrl || res.data.thumbnailUrl || '');
+        refreshImageInputUi(inputId);
+        status.textContent = `Uploaded to Drive successfully. File ID: ${res.data.fileId || 'saved'}`;
+        if(options.statusId) setStatus(options.statusId, res.message, true);
+        if(typeof options.onSuccess === 'function') options.onSuccess(res);
+      }else{
+        status.textContent = res.message || 'Upload failed.';
+        if(options.statusId) setStatus(options.statusId, res.message || 'Upload failed.');
+      }
+    }catch(err){
+      const msg = err && err.message ? err.message : 'Upload failed.';
+      status.textContent = msg;
+      if(options.statusId) setStatus(options.statusId, msg);
+    }finally{
+      hideLoader();
+      button.disabled = false;
+      fileInput.value = '';
+    }
+  });
+}
+
+function createNonce(){ return `${Date.now()}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`; }
 async function apiRequest(action, payload={}, method="POST"){
   payload = payload || {};
   if(!payload.token && action !== "login" && action !== "signup" && action !== "getCurrentExamPublic") payload.token = getToken();
   if(!payload.actionSessionToken && getEffectiveAdminRole() === 'subadmin' && SUBADMIN_TOKEN_ACTIONS.has(action)){ const storedActionToken = getSubadminActionToken(); if(storedActionToken) payload.actionSessionToken = storedActionToken; }
+  if(!["login","signup","validateSession","logout","getCurrentExamPublic","getPublicSiteContent","checkResultPublic","checkResultPublicById","listPublishedResultsForStudent"].includes(action)){
+    payload.timestamp = new Date().toISOString();
+    payload.nonce = createNonce();
+  }
   try{
     let response;
     if(method === "GET"){
@@ -723,9 +1005,9 @@ async function fileToText(file){ return await file.text(); }
 function downloadText(filename,text){ const blob=new Blob([text], {type:"text/csv;charset=utf-8"}); const a=document.createElement("a"); const url=URL.createObjectURL(blob); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url); }
 function downloadCandidateTemplate(){
   const csv = [
-    'fullName,regId,passportUrl',
+    'fullName,regId,imageUrl',
     'Ada Grace,REG001,https://example.com/ada.jpg',
-    'John Michael,REG002,'
+    'John Michael,REG002,1orV6HAZW1z4KseDJGyQlPwCihuIRxs1N'
   ].join('\n');
   downloadText('student_upload_template.csv', csv);
   setStatus('candidateStatus','Student CSV template downloaded.', true);
@@ -735,7 +1017,7 @@ function downloadQuestionTemplate(){
     'question,imageUrl,optionA,optionB,optionC,optionD,answer',
     'What is 2 + 2?,,3,4,5,6,B',
     'Which planet is known as the Red Planet?,,Earth,Mars,Jupiter,Venus,B',
-    'Identify the shape with 3 sides.,https://example.com/triangle.png,Square,Circle,Triangle,Rectangle,C'
+    'Identify the shape with 3 sides.,1orV6HAZW1z4KseDJGyQlPwCihuIRxs1N,Square,Circle,Triangle,Rectangle,C'
   ].join('\n');
   downloadText('cbt_question_upload_template.csv', csv);
   setStatus('questionStatus','CBT question CSV template downloaded.', true);
@@ -860,7 +1142,7 @@ async function showPortal(){
 }
 async function refreshAll(){
   showLoader("Loading dashboard...");
-  await Promise.all([loadSettings(), loadExams(), loadCandidates(), loadUsers(), loadPermissionCodes()]);
+  await Promise.all([loadSettings(), loadExams(), loadCandidates(), loadUsers(), loadPermissionCodes(), loadManagedFiles()]);
   hideLoader();
 }
 async function loadSettings(){
@@ -893,7 +1175,16 @@ async function loadSettings(){
     if($("privacyContent")) $("privacyContent").value = res.data.privacyContent || '';
     if($("cookiesContent")) $("cookiesContent").value = res.data.cookiesContent || '';
     if($("subadminTokenTtlMinutes")) $("subadminTokenTtlMinutes").value = res.data.subadminActionTokenTtlMinutes || 60;
+    if($("requestFreshnessWindowSeconds")) $("requestFreshnessWindowSeconds").value = res.data.requestFreshnessWindowSeconds || 180;
+    if($("examSnapshotIntervalSeconds")) $("examSnapshotIntervalSeconds").value = res.data.examSnapshotIntervalSeconds || 180;
+    if($("maxUploadSizeMb")) $("maxUploadSizeMb").value = res.data.maxUploadSizeMb || 8;
+    if($("driveBackupCsvUploads")) $("driveBackupCsvUploads").checked = !!res.data.driveBackupCsvUploads;
+    if($("driveBackupResultsExports")) $("driveBackupResultsExports").checked = !!res.data.driveBackupResultsExports;
+    if($("bulkEmailBatchSize")) $("bulkEmailBatchSize").value = res.data.bulkEmailBatchSize || 20;
+    if($("bulkEmailMaxRecipientsPerSend")) $("bulkEmailMaxRecipientsPerSend").value = res.data.bulkEmailMaxRecipientsPerSend || 150;
+    if($("defaultFileDownloadable")) $("defaultFileDownloadable").checked = !!res.data.defaultFileDownloadable;
     setFavicon(res.data.siteFaviconUrl || res.data.resultBrandLogoUrl || '');
+    ['resultBrandLogoUrl','resultSignatureUrl','siteFaviconUrl','ceoImageUrl'].forEach(refreshImageInputUi);
     renderSubadminTokenInfo(res.data);
   }
 }
@@ -926,10 +1217,25 @@ async function saveSettings(){
     termsContent:$("termsContent")?.value || '',
     privacyContent:$("privacyContent")?.value || '',
     cookiesContent:$("cookiesContent")?.value || '',
-    subadminActionTokenTtlMinutes:$("subadminTokenTtlMinutes")?.value || 60
+    subadminActionTokenTtlMinutes:$("subadminTokenTtlMinutes")?.value || 60,
+    requestFreshnessWindowSeconds:$("requestFreshnessWindowSeconds")?.value || 180,
+    examSnapshotIntervalSeconds:$("examSnapshotIntervalSeconds")?.value || 180,
+    maxUploadSizeMb:$("maxUploadSizeMb")?.value || 8,
+    driveBackupCsvUploads:$("driveBackupCsvUploads")?.checked || false,
+    driveBackupResultsExports:$("driveBackupResultsExports")?.checked !== false,
+    bulkEmailBatchSize:$("bulkEmailBatchSize")?.value || 20,
+    bulkEmailMaxRecipientsPerSend:$("bulkEmailMaxRecipientsPerSend")?.value || 150,
+    defaultFileDownloadable:$("defaultFileDownloadable")?.checked !== false
   },"POST");
   hideLoader(); setStatus("settingsStatus", res.message, res.ok);
-  if(res.ok && res.data){ setFavicon(res.data.siteFaviconUrl || res.data.resultBrandLogoUrl || ''); renderSubadminTokenInfo(res.data); }
+  if(res.ok && res.data){
+    try{ localStorage.removeItem('genz_cbt_public_site_content_v1'); }catch(err){}
+    try{ localStorage.setItem('genz_cbt_public_site_bust_v1', String(Date.now())); }catch(err){}
+    setFavicon(res.data.siteFaviconUrl || res.data.resultBrandLogoUrl || '');
+    if($("ceoImageUrl")) $("ceoImageUrl").value = normalizeDisplayImageUrl($("ceoImageUrl").value || res.data.ceoImageUrl || '');
+    ['resultBrandLogoUrl','resultSignatureUrl','siteFaviconUrl','ceoImageUrl'].forEach(refreshImageInputUi);
+    renderSubadminTokenInfo(res.data);
+  }
 }
 function renderSubadminTokenInfo(data){
   if(!$("subadminTokenInfo")) return;
@@ -1436,8 +1742,11 @@ async function loadUsers(){
   renderUsers();
 }
 function renderUsers(){
+  const liveStudentKeys = new Set(studentsData.map(u => String(u.username)));
+  Array.from(selectedStudentUsernames).forEach(key => { if(!liveStudentKeys.has(key)) selectedStudentUsernames.delete(key); });
   $("adminsBox").innerHTML = renderUserTable(adminsData, 'admin');
   $("studentsBox").innerHTML = renderUserTable(studentsData, 'student');
+  updateStudentSelectionInfo();
 }
 function userRoleBadge(role){
   if(role === 'principal_admin') return '<span class="pill" style="background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe">Principal Admin</span>';
@@ -1459,7 +1768,8 @@ function canManageTarget(u, type){
 function renderUserTable(data, type){
   if(!data.length) return '<div class="muted">No users.</div>';
   const role = getEffectiveAdminRole();
-  let html=`<div class="table-wrap"><table><thead><tr><th>Name</th><th>Username</th>${type==='student' ? '<th>Reg ID</th>' : '<th>Role</th>'}<th>Status</th><th>Actions</th></tr></thead><tbody>`;
+  const includeSelect = type === 'student';
+  let html=`<div class="table-wrap"><table><thead><tr>${includeSelect ? '<th>Select</th>' : ''}<th>Name</th><th>Username</th>${type==='student' ? '<th>Reg ID</th><th>Image</th>' : '<th>Role</th>'}<th>Status</th><th>Actions</th></tr></thead><tbody>`;
   data.forEach(u=>{
     const roleCell = type==='student' ? esc(u.regId || '—') : userRoleBadge(u.role);
     const isPrincipal = u.role === 'principal_admin';
@@ -1475,15 +1785,117 @@ function renderUserTable(data, type){
       actions = `<button class="small-btn success" type="button" onclick="restoreUserItem('${esc(u.username)}')">Restore</button>`;
       if(!isPrincipal) actions += ` <button class="small-btn danger" type="button" onclick="hardDeleteUserItem('${esc(u.username)}')">Delete Forever</button>`;
     }else{
-      actions = `<button class="small-btn warn" type="button" onclick="toggleUser('${esc(u.username)}', false)" ${u.isActive ? '' : 'disabled style="opacity:.55;cursor:not-allowed"'}>Deactivate</button>` +
+      const editBtn = type === 'student' ? ` <button class="small-btn" type="button" onclick="openStudentEditor('${esc(u.username)}')">Edit</button>` : '';
+      actions = editBtn +
+                ` <button class="small-btn warn" type="button" onclick="toggleUser('${esc(u.username)}', false)" ${u.isActive ? '' : 'disabled style="opacity:.55;cursor:not-allowed"'}>Deactivate</button>` +
                 ` <button class="small-btn success" type="button" onclick="toggleUser('${esc(u.username)}', true)" ${u.isActive ? 'disabled style="opacity:.55;cursor:not-allowed"' : ''}>Activate</button>` +
                 ` <button class="small-btn danger" type="button" onclick="deleteUser('${esc(u.username)}')">Delete</button>` +
                 ` <button class="small-btn" type="button" onclick="resetManagedUserPassword('${esc(u.username)}')">Reset Password</button>`;
     }
-    html += `<tr><td>${esc(u.fullName)}</td><td>${esc(u.username)}</td><td>${roleCell}</td><td>${userStatusBadge(u)}</td><td><div class="actions">${actions}</div></td></tr>`;
+    const imageCell = type === 'student'
+      ? (u.passportUrl ? `<a href="${esc(u.passportUrl)}" target="_blank" rel="noopener">Open Image</a>` : '<span class="muted">—</span>')
+      : '';
+    html += '<tr>';
+    if(includeSelect){
+      html += `<td><label class="pill" style="cursor:pointer"><input type="checkbox" ${selectedStudentUsernames.has(String(u.username)) ? 'checked' : ''} onchange="toggleStudentSelection('${esc(u.username)}', this.checked)" style="margin:0 6px 0 0">Pick</label></td>`;
+    }
+    html += type === 'student'
+      ? `<td>${esc(u.fullName)}</td><td>${esc(u.username)}</td><td>${roleCell}</td><td>${imageCell}</td><td>${userStatusBadge(u)}</td><td><div class="actions">${actions}</div></td></tr>`
+      : `<td>${esc(u.fullName)}</td><td>${esc(u.username)}</td><td>${roleCell}</td><td>${userStatusBadge(u)}</td><td><div class="actions">${actions}</div></td></tr>`;
   });
   return html + '</tbody></table></div>';
 }
+
+function openStudentEditor(username){
+  const item = studentsData.find(u => String(u.username) === String(username));
+  if(!item) return alert('Student record not found.');
+  $("studentEditorOriginalUsername").value = item.username || '';
+  $("studentEditorFullName").value = item.fullName || '';
+  $("studentEditorUsername").value = item.username || '';
+  $("studentEditorRegId").value = item.regId || '';
+  $("studentEditorPassportUrl").value = item.passportUrl || '';
+  if($("studentEditorStatus")) $("studentEditorStatus").textContent = '';
+  if($("studentEditorCard")) $("studentEditorCard").classList.remove('hidden');
+  attachImageUrlNormalizer('candidatePassportUrl');
+attachImageUrlNormalizer('studentEditorPassportUrl');
+attachImageUrlNormalizer('imageUrl');
+  window.scrollTo({ top: $("studentEditorCard").getBoundingClientRect().top + window.scrollY - 90, behavior: 'smooth' });
+}
+function closeStudentEditor(){
+  if($("studentEditorCard")) $("studentEditorCard").classList.add('hidden');
+  if($("studentEditorStatus")) $("studentEditorStatus").textContent = '';
+}
+async function saveStudentEditor(){
+  const originalUsername = $("studentEditorOriginalUsername").value.trim();
+  const fullName = $("studentEditorFullName").value.trim();
+  const username = $("studentEditorUsername").value.trim();
+  const regId = $("studentEditorRegId").value.trim();
+  const passportUrl = $("studentEditorPassportUrl").value.trim();
+  if(!originalUsername || !fullName || !username || !regId) return setStatus("studentEditorStatus","Full name, username, and Registration ID are required.");
+  showLoader("Saving student details...");
+  const res = await apiRequest("updateStudentDetails",{ originalUsername, fullName, username, regId, passportUrl }, "POST");
+  hideLoader();
+  setStatus("studentEditorStatus", res.message, res.ok);
+  if(res.ok){
+    if(selectedStudentUsernames.has(originalUsername)){
+      selectedStudentUsernames.delete(originalUsername);
+      selectedStudentUsernames.add(username);
+    }
+    await Promise.all([loadUsers(), loadCandidates()]);
+    openStudentEditor(username);
+  }
+}
+
+function updateStudentSelectionInfo(){
+  if(!$("studentsSelectionInfo")) return;
+  $("studentsSelectionInfo").textContent = `${selectedStudentUsernames.size} selected student(s) out of ${studentsData.length} loaded.`;
+}
+function toggleStudentSelection(username, checked){
+  const key = String(username);
+  if(checked) selectedStudentUsernames.add(key); else selectedStudentUsernames.delete(key);
+  updateStudentSelectionInfo();
+}
+function toggleAllStudentsSelection(){
+  const shouldSelect = studentsData.some(item => !selectedStudentUsernames.has(String(item.username)));
+  studentsData.forEach(item => {
+    const key = String(item.username);
+    if(shouldSelect) selectedStudentUsernames.add(key); else selectedStudentUsernames.delete(key);
+  });
+  renderUsers();
+  updateStudentSelectionInfo();
+}
+async function runBulkStudentAction(kind){
+  const usernames = Array.from(selectedStudentUsernames);
+  if(!usernames.length) return alert('Select at least one student first.');
+  const actionMap = {
+    activate: 'setUserActive',
+    deactivate: 'setUserActive',
+    delete: 'deleteUser',
+    restore: 'restoreUser',
+    hardDelete: 'hardDeleteUser',
+    resetPassword: 'adminResetUserPassword'
+  };
+  if(kind === 'delete' && !confirm('Delete selected students? You can restore them later.')) return;
+  if(kind === 'hardDelete' && !confirm('Delete selected students forever? This cannot be undone.')) return;
+  showLoader('Updating selected students...');
+  let okCount = 0, failCount = 0;
+  for(const username of usernames){
+    const payload = { username };
+    if(kind === 'activate') payload.active = true;
+    if(kind === 'deactivate') payload.active = false;
+    const res = await apiRequest(actionMap[kind], payload, 'POST');
+    if(res.ok) okCount++; else failCount++;
+  }
+  hideLoader();
+  alert(`${okCount} student action(s) succeeded${failCount ? `, ${failCount} failed.` : '.'}`);
+  if(okCount){
+    selectedStudentUsernames.clear();
+    await loadUsers();
+  }else{
+    updateStudentSelectionInfo();
+  }
+}
+
 async function toggleUser(username, active){
   showLoader("Updating user...");
   const res=await apiRequest("setUserActive",{username, active},"POST");
@@ -1805,6 +2217,28 @@ async function loadAudio(){
   audioData = res.ok ? (res.data || []) : [];
   renderAudio();
 }
+async function loadVideos(){
+  const examCode = $("snapshotsExamCode").value.trim();
+  const regId = $("snapshotsRegId").value.trim();
+  const includeDeleted = $("snapshotsShowDeleted") ? $("snapshotsShowDeleted").checked : false;
+  showLoader("Loading video clips...");
+  const res = await apiRequest("listVideosByExam", { examCode, regId, includeDeleted, limit: 300 }, "GET");
+  hideLoader();
+  setStatus("videoStatus", res.message, res.ok);
+  videosData = res.ok ? (res.data || []).filter(item => item.kind !== 'screen') : [];
+  renderVideos();
+}
+async function loadScreens(){
+  const examCode = $("snapshotsExamCode").value.trim();
+  const regId = $("snapshotsRegId").value.trim();
+  const includeDeleted = $("snapshotsShowDeleted") ? $("snapshotsShowDeleted").checked : false;
+  showLoader("Loading screen recordings...");
+  const res = await apiRequest("listScreensByExam", { examCode, regId, includeDeleted, limit: 300 }, "GET");
+  hideLoader();
+  setStatus("screenStatus", res.message, res.ok);
+  screenData = res.ok ? (res.data || []) : [];
+  renderScreens();
+}
 
 function evidenceKindLabel(kind){
   return ({ snapshot:'Snapshots', audio:'Audio', video:'Video', screen:'Screen Recordings' }[kind]) || 'Evidence';
@@ -1815,38 +2249,7 @@ function evidenceStatusId(kind){
 function evidenceBoxId(kind){
   return ({ snapshot:'snapshotsBox', audio:'audioBox', video:'videosBox', screen:'screenBox' }[kind]) || 'snapshotsBox';
 }
-function renderDriveFolderView(kind, payload){
-  const box = $(evidenceBoxId(kind));
-  if(!box) return;
-  const data = payload || {};
-  const folder = data.folder || {};
-  const children = Array.isArray(data.children) ? data.children : [];
-  const items = Array.isArray(data.items) ? data.items : [];
-  let html = `<div class="table-wrap"><table><tbody>`;
-  html += `<tr><th style="width:180px">Folder</th><td><strong>${esc(folder.name || evidenceKindLabel(kind))}</strong></td></tr>`;
-  html += `<tr><th>Scope</th><td>Exam: <span class="code">${esc(folder.examCode || 'ALL')}</span> &nbsp; Reg ID: <span class="code">${esc(folder.regId || 'ALL')}</span></td></tr>`;
-  html += `<tr><th>Open</th><td>${folder.folderUrl ? `<a class="btn ghost" href="${esc(folder.folderUrl)}" target="_blank" rel="noopener">Open Folder in Drive</a>` : '<span class="muted">Folder unavailable</span>'}</td></tr>`;
-  html += `</tbody></table></div>`;
-  html += `<div class="muted" style="margin:10px 0 8px">Direct contents from Drive${children.length ? '' : ' (none found yet)'}.</div>`;
-  if(children.length){
-    html += `<div class="table-wrap"><table><thead><tr><th>Type</th><th>Name</th><th>Open</th></tr></thead><tbody>`;
-    children.forEach(child=>{
-      html += `<tr><td>${esc(child.type || '')}</td><td>${esc(child.name || '')}</td><td><a href="${esc(child.url || '#')}" target="_blank" rel="noopener">Open in Drive</a></td></tr>`;
-    });
-    html += `</tbody></table></div>`;
-  }
-  html += `<div class="muted" style="margin:14px 0 8px">Tracked uploads for this filter${items.length ? '' : ' (none found yet)'}.</div>`;
-  if(items.length){
-    html += `<div class="table-wrap"><table><thead><tr><th>Time</th><th>Exam</th><th>Reg ID</th><th>Name</th><th>Open</th><th>Status</th></tr></thead><tbody>`;
-    items.forEach(item=>{
-      const state = item.isDeleted ? 'Deleted' : 'Active';
-      html += `<tr><td>${esc(item.createdAt || '')}</td><td>${esc(item.examCode || '')}</td><td>${esc(item.regId || '')}</td><td>${esc(item.fullName || item.originalName || '')}</td><td><a href="${esc(item.driveUrl || '#')}" target="_blank" rel="noopener">Open in Drive</a></td><td>${esc(state)}</td></tr>`;
-    });
-    html += `</tbody></table></div>`;
-  }
-  box.innerHTML = html;
-}
-async function loadEvidenceFolder(kind, openInNewTab=true){
+async function openEvidenceFolder(kind, openInNewTab=true){
   const examCode = $('snapshotsExamCode').value.trim();
   const regId = $('snapshotsRegId').value.trim();
   const includeDeleted = $('snapshotsShowDeleted') ? $('snapshotsShowDeleted').checked : false;
@@ -1855,12 +2258,12 @@ async function loadEvidenceFolder(kind, openInNewTab=true){
   hideLoader();
   setStatus(evidenceStatusId(kind), res.message, res.ok);
   if(res.ok){
-    renderDriveFolderView(kind, res.data || {});
     const folderUrl = res.data && res.data.folder ? res.data.folder.folderUrl : '';
     if(openInNewTab && folderUrl) window.open(folderUrl, '_blank', 'noopener');
-  } else {
-    const box = $(evidenceBoxId(kind));
-    if(box) box.innerHTML = '';
+    if(kind === 'snapshot') await loadSnapshots();
+    if(kind === 'audio') await loadAudio();
+    if(kind === 'video') await loadVideos();
+    if(kind === 'screen') await loadScreens();
   }
 }
 
@@ -1914,42 +2317,43 @@ function renderSnapshots(){
 }
 function renderAudio(){
   if(!audioData.length){ $("audioBox").innerHTML = '<div class="muted">No audio clips found for this filter yet.</div>'; return; }
-  let html = `<div class="table-wrap"><table><thead><tr><th>Time</th><th>Exam</th><th>Reg ID</th><th>Name</th><th>Clip</th><th>Status</th></tr></thead><tbody>`;
+  let html = `<div class="table-wrap"><table><thead><tr><th>Time</th><th>Exam</th><th>Reg ID</th><th>Name</th><th>Clip</th><th>Status</th><th>Action</th></tr></thead><tbody>`;
   audioData.forEach(item=>{
     const state = item.isDeleted ? 'Deleted' : 'Active';
-    html += `<tr><td>${esc(item.createdAt || '')}</td><td>${esc(item.examCode || '')}</td><td>${esc(item.regId || '')}</td><td>${esc(item.fullName || '')}</td><td><a href="${esc(item.driveUrl || '#')}" target="_blank" rel="noopener">Open Audio</a></td><td>${esc(state)}</td></tr>`;
+    const actions = item.isDeleted
+      ? `<button class="small-btn success" onclick="restoreAudioItem('${esc(item.id)}')">Restore</button> <button class="small-btn danger" onclick="hardDeleteAudioItem('${esc(item.id)}')">Delete Forever</button>`
+      : `<button class="small-btn danger" onclick="deleteAudioItem('${esc(item.id)}')">Delete</button>`;
+    html += `<tr style="${item.isDeleted ? 'opacity:.72' : ''}"><td>${esc(item.createdAt || '')}</td><td>${esc(item.examCode || '')}</td><td>${esc(item.regId || '')}</td><td>${esc(item.fullName || '')}</td><td><a href="${esc(item.driveUrl || '#')}" target="_blank" rel="noopener">Open Audio</a></td><td>${esc(state)}</td><td>${actions}</td></tr>`;
   });
   $("audioBox").innerHTML = html + '</tbody></table></div>';
 }
-
-
-async function loadScreens(){
-  await loadEvidenceFolder('screen');
-}
-
-async function loadSnapshots(){
-  await loadEvidenceFolder('snapshot');
-}
-
-async function loadAudio(){
-  await loadEvidenceFolder('audio');
-}
-
-async function loadVideos(){
-  await loadEvidenceFolder('video');
-}
-
 function renderVideos(){
   if(!$('videosBox')) return;
   if(!videosData.length){ $('videosBox').innerHTML = '<div class="muted">No video clips found for this filter yet.</div>'; return; }
-  let html = `<div class="table-wrap"><table><thead><tr><th>Time</th><th>Exam</th><th>Reg ID</th><th>Name</th><th>Type</th><th>Preview</th><th>Open</th><th>Status</th></tr></thead><tbody>`;
+  let html = `<div class="table-wrap"><table><thead><tr><th>Time</th><th>Exam</th><th>Reg ID</th><th>Name</th><th>Preview</th><th>Open</th><th>Status</th><th>Action</th></tr></thead><tbody>`;
   videosData.forEach(item=>{
     const state = item.isDeleted ? 'Deleted' : 'Active';
     const preview = item.viewUrl || item.driveUrl || '';
-    const typeLabel = item.kind === 'screen' ? 'Screen' : 'Camera';
-    html += `<tr><td>${esc(item.createdAt || '')}</td><td>${esc(item.examCode || '')}</td><td>${esc(item.regId || '')}</td><td>${esc(item.fullName || '')}</td><td>${esc(typeLabel)}</td><td>${preview ? `<video controls preload="metadata" style="width:210px;max-width:100%;border-radius:10px;border:1px solid var(--line);background:#000"><source src="${esc(preview)}"></video>` : '<span class="muted">No preview</span>'}</td><td><a href="${esc(item.driveUrl || '#')}" target="_blank" rel="noopener">Open Video</a></td><td>${esc(state)}</td></tr>`;
+    const actions = item.isDeleted
+      ? `<button class="small-btn success" onclick="restoreVideoItem('${esc(item.id)}')">Restore</button> <button class="small-btn danger" onclick="hardDeleteVideoItem('${esc(item.id)}')">Delete Forever</button>`
+      : `<button class="small-btn danger" onclick="deleteVideoItem('${esc(item.id)}')">Delete</button>`;
+    html += `<tr style="${item.isDeleted ? 'opacity:.72' : ''}"><td>${esc(item.createdAt || '')}</td><td>${esc(item.examCode || '')}</td><td>${esc(item.regId || '')}</td><td>${esc(item.fullName || '')}</td><td>${preview ? `<video controls preload="metadata" style="width:210px;max-width:100%;border-radius:10px;border:1px solid var(--line);background:#000"><source src="${esc(preview)}"></video>` : '<span class="muted">No preview</span>'}</td><td><a href="${esc(item.driveUrl || '#')}" target="_blank" rel="noopener">Open Video</a></td><td>${esc(state)}</td><td>${actions}</td></tr>`;
   });
   $('videosBox').innerHTML = html + '</tbody></table></div>';
+}
+function renderScreens(){
+  if(!$('screenBox')) return;
+  if(!screenData.length){ $('screenBox').innerHTML = '<div class="muted">No screen recordings found for this filter yet.</div>'; return; }
+  let html = `<div class="table-wrap"><table><thead><tr><th>Time</th><th>Exam</th><th>Reg ID</th><th>Name</th><th>Preview</th><th>Open</th><th>Status</th><th>Action</th></tr></thead><tbody>`;
+  screenData.forEach(item=>{
+    const state = item.isDeleted ? 'Deleted' : 'Active';
+    const preview = item.viewUrl || item.driveUrl || '';
+    const actions = item.isDeleted
+      ? `<button class="small-btn success" onclick="restoreScreenItem('${esc(item.id)}')">Restore</button> <button class="small-btn danger" onclick="hardDeleteScreenItem('${esc(item.id)}')">Delete Forever</button>`
+      : `<button class="small-btn danger" onclick="deleteScreenItem('${esc(item.id)}')">Delete</button>`;
+    html += `<tr style="${item.isDeleted ? 'opacity:.72' : ''}"><td>${esc(item.createdAt || '')}</td><td>${esc(item.examCode || '')}</td><td>${esc(item.regId || '')}</td><td>${esc(item.fullName || '')}</td><td>${preview ? `<video controls preload="metadata" style="width:210px;max-width:100%;border-radius:10px;border:1px solid var(--line);background:#000"><source src="${esc(preview)}"></video>` : '<span class="muted">No preview</span>'}</td><td><a href="${esc(item.driveUrl || '#')}" target="_blank" rel="noopener">Open Screen</a></td><td>${esc(state)}</td><td>${actions}</td></tr>`;
+  });
+  $('screenBox').innerHTML = html + '</tbody></table></div>';
 }
 async function runBulkSnapshotAction(action, confirmText=''){
   const fileIds = Array.from(selectedSnapshotIds);
@@ -1984,6 +2388,15 @@ async function hardDeleteSnapshotItem(fileId){
   setStatus("snapshotsStatus", res.message, res.ok);
   if(res.ok) await loadSnapshots();
 }
+async function deleteAudioItem(fileId){ if(!confirm("Delete this audio clip? You can restore it later.")) return; showLoader("Deleting audio..."); const res=await apiRequest("deleteAudio",{ fileId },"POST"); hideLoader(); setStatus("audioStatus",res.message,res.ok); if(res.ok) await loadAudio(); }
+async function restoreAudioItem(fileId){ showLoader("Restoring audio..."); const res=await apiRequest("restoreAudio",{ fileId },"POST"); hideLoader(); setStatus("audioStatus",res.message,res.ok); if(res.ok) await loadAudio(); }
+async function hardDeleteAudioItem(fileId){ if(!confirm("Delete this audio clip forever? This cannot be undone.")) return; showLoader("Deleting audio forever..."); const res=await apiRequest("hardDeleteAudio",{ fileId },"POST"); hideLoader(); setStatus("audioStatus",res.message,res.ok); if(res.ok) await loadAudio(); }
+async function deleteVideoItem(fileId){ if(!confirm("Delete this video clip? You can restore it later.")) return; showLoader("Deleting video..."); const res=await apiRequest("deleteVideo",{ fileId },"POST"); hideLoader(); setStatus("videoStatus",res.message,res.ok); if(res.ok) await loadVideos(); }
+async function restoreVideoItem(fileId){ showLoader("Restoring video..."); const res=await apiRequest("restoreVideo",{ fileId },"POST"); hideLoader(); setStatus("videoStatus",res.message,res.ok); if(res.ok) await loadVideos(); }
+async function hardDeleteVideoItem(fileId){ if(!confirm("Delete this video clip forever? This cannot be undone.")) return; showLoader("Deleting video forever..."); const res=await apiRequest("hardDeleteVideo",{ fileId },"POST"); hideLoader(); setStatus("videoStatus",res.message,res.ok); if(res.ok) await loadVideos(); }
+async function deleteScreenItem(fileId){ if(!confirm("Delete this screen recording? You can restore it later.")) return; showLoader("Deleting screen recording..."); const res=await apiRequest("deleteScreen",{ fileId },"POST"); hideLoader(); setStatus("screenStatus",res.message,res.ok); if(res.ok) await loadScreens(); }
+async function restoreScreenItem(fileId){ showLoader("Restoring screen recording..."); const res=await apiRequest("restoreScreen",{ fileId },"POST"); hideLoader(); setStatus("screenStatus",res.message,res.ok); if(res.ok) await loadScreens(); }
+async function hardDeleteScreenItem(fileId){ if(!confirm("Delete this screen recording forever? This cannot be undone.")) return; showLoader("Deleting screen recording forever..."); const res=await apiRequest("hardDeleteScreen",{ fileId },"POST"); hideLoader(); setStatus("screenStatus",res.message,res.ok); if(res.ok) await loadScreens(); }
 
 function generateResultCheckerLink(showStatus=true){
   const examCode = $("resultLinkExamSelect").value.trim();
@@ -2010,6 +2423,145 @@ async function copyResultCheckerLink(){
   }
 }
 
+
+async function fileToDataObject(file){
+  return await new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const result=String(reader.result||'');
+      resolve({ fileName:file.name, mimeType:file.type || 'application/octet-stream', fileData: result.split(',')[1] || '' });
+    };
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+function updateManagedFilesSelectionInfo(){
+  if(!$("managedFilesSelectionInfo")) return;
+  $("managedFilesSelectionInfo").textContent = `${selectedManagedFileIds.size} selected managed file(s) out of ${managedFilesData.length} loaded.`;
+}
+function toggleManagedFileSelection(id, checked){
+  const key = String(id);
+  if(checked) selectedManagedFileIds.add(key); else selectedManagedFileIds.delete(key);
+  updateManagedFilesSelectionInfo();
+}
+function toggleAllManagedFilesSelection(){
+  const shouldSelect = managedFilesData.some(item => !selectedManagedFileIds.has(String(item.id)));
+  managedFilesData.forEach(item => {
+    const key = String(item.id);
+    if(shouldSelect) selectedManagedFileIds.add(key); else selectedManagedFileIds.delete(key);
+  });
+  renderManagedFiles();
+}
+function renderManagedFiles(){
+  const box=$("managedFilesBox");
+  if(!box) return;
+  const liveManagedKeys = new Set(managedFilesData.map(item => String(item.id)));
+  Array.from(selectedManagedFileIds).forEach(key => { if(!liveManagedKeys.has(key)) selectedManagedFileIds.delete(key); });
+  updateManagedFilesSelectionInfo();
+  if(!managedFilesData.length){ box.innerHTML='<div class="empty" style="padding:16px">No managed files yet.</div>'; return; }
+  let html='<table><thead><tr><th>Select</th><th>Name</th><th>Type</th><th>Created</th><th>Download</th><th>Status</th><th>Links</th><th>Action</th></tr></thead><tbody>';
+  managedFilesData.forEach(item=>{
+    const meta=item.meta||{};
+    const state=item.isDeleted ? 'Deleted' : 'Active';
+    const links=`<div class="stack"><div class="file-link-box">View: <a href="${esc(item.viewUrl||item.driveUrl||'#')}" target="_blank" rel="noopener">Open</a></div><div class="file-link-box">Embed/Preview: <a href="${esc(item.previewUrl||item.driveUrl||'#')}" target="_blank" rel="noopener">Preview</a></div>${meta.downloadable ? `<div class="file-link-box">Download: <a href="${esc(item.downloadUrl||item.driveUrl||'#')}" target="_blank" rel="noopener">Direct link</a></div>` : ''}</div>`;
+    const action = item.isDeleted
+      ? `<div class="actions"><button class="ghost small-btn" onclick="restoreManagedFile('${esc(item.id)}')">Restore</button><button class="danger small-btn" onclick="hardDeleteManagedFile('${esc(item.id)}')">Delete Forever</button></div>`
+      : `<div class="actions"><button class="ghost small-btn" onclick="toggleManagedFileDownload('${esc(item.id)}', ${meta.downloadable ? 'false' : 'true'})">${meta.downloadable ? 'Disable Download' : 'Enable Download'}</button><button class="warn small-btn" onclick="deleteManagedFile('${esc(item.id)}')">Delete</button></div>`;
+    html += `<tr><td><label class="pill" style="cursor:pointer"><input type="checkbox" ${selectedManagedFileIds.has(String(item.id)) ? 'checked' : ''} onchange="toggleManagedFileSelection('${esc(item.id)}', this.checked)" style="margin:0 6px 0 0">Pick</label></td><td>${esc(item.originalName||'')}</td><td>${esc(meta.mimeType || item.kind || '')}</td><td>${esc(item.createdAt||'')}</td><td><span class="tag">${meta.downloadable ? 'Enabled' : 'Hidden'}</span></td><td>${esc(state)}</td><td>${links}</td><td>${action}</td></tr>`;
+  });
+  box.innerHTML=html+'</tbody></table>';
+}
+async function loadManagedFiles(){
+  const res=await apiRequest('listManagedFiles',{},'GET');
+  if(res.ok){
+    managedFilesData=Array.isArray(res.data)?res.data:[];
+    renderManagedFiles();
+    setStatus('managedFileStatus', res.message || 'Managed files loaded.', true);
+  }else{
+    setStatus('managedFileStatus', res.message || 'Failed to load managed files.');
+  }
+}
+async function refreshManagedFiles(){
+  showLoader('Refreshing managed files from Drive...');
+  const res = await apiRequest('refreshManagedFiles',{},'POST');
+  if(res.ok && Array.isArray(res.data)){
+    managedFilesData = res.data;
+    renderManagedFiles();
+  }else{
+    await loadManagedFiles();
+  }
+  hideLoader();
+  setStatus('managedFileStatus', res.message || 'Managed files refreshed.', !!res.ok);
+}
+async function runBulkManagedFileAction(kind){
+  const ids = Array.from(selectedManagedFileIds);
+  if(!ids.length) return setStatus('managedFileStatus','Select at least one managed file first.');
+  if(kind === 'delete' && !confirm('Delete selected managed files? You can restore them later.')) return;
+  if(kind === 'hardDelete' && !confirm('Delete selected managed files forever from the app index?')) return;
+  showLoader('Updating selected managed files...');
+  let okCount = 0, failCount = 0;
+  for(const id of ids){
+    let res;
+    if(kind === 'enableDownload') res = await apiRequest('setManagedFileDownloadable',{ id, downloadable:true },'POST');
+    if(kind === 'disableDownload') res = await apiRequest('setManagedFileDownloadable',{ id, downloadable:false },'POST');
+    if(kind === 'delete') res = await apiRequest('deleteManagedFile',{ id },'POST');
+    if(kind === 'restore') res = await apiRequest('restoreManagedFile',{ id },'POST');
+    if(kind === 'hardDelete') res = await apiRequest('hardDeleteManagedFile',{ id },'POST');
+    if(res && res.ok) okCount++; else failCount++;
+  }
+  hideLoader();
+  setStatus('managedFileStatus', `${okCount} managed file action(s) succeeded${failCount ? `, ${failCount} failed.` : '.'}`, okCount > 0);
+  if(okCount){
+    selectedManagedFileIds.clear();
+    await loadManagedFiles();
+  }else{
+    updateManagedFilesSelectionInfo();
+  }
+}
+async function uploadManagedFile(){
+  const file=$("managedFileInput").files[0];
+  if(!file) return setStatus('managedFileStatus','Select a file first.');
+  showLoader('Uploading file...');
+  try{
+    const payload=await fileToDataObject(file);
+    payload.downloadable=$("managedFileDownloadable").checked;
+    const res=await apiRequest('uploadManagedFile',payload,'POST');
+    hideLoader();
+    setStatus('managedFileStatus',res.message,res.ok);
+    if(res.ok && res.data){
+      $("managedFileLatest").innerHTML=`<div class="file-link-box">View Link: ${esc(res.data.viewUrl||res.data.driveUrl||'')}</div><div class="file-link-box">Embed/Preview Link: ${esc(res.data.previewUrl||res.data.driveUrl||'')}</div>${(res.data.meta||{}).downloadable ? `<div class="file-link-box">Download Link: ${esc(res.data.downloadUrl||res.data.driveUrl||'')}</div>` : ''}`;
+      $("managedFileInput").value='';
+      await loadManagedFiles();
+    }
+  }catch(err){ hideLoader(); setStatus('managedFileStatus', err.message || 'Upload failed.'); }
+}
+async function reimportDriveFiles(){ showLoader('Reimporting Drive files...'); const res=await apiRequest('reimportDriveFiles',{},'POST'); hideLoader(); setStatus('managedFileStatus',res.message,res.ok); if(res.ok){ selectedManagedFileIds.clear(); await loadManagedFiles(); } }
+async function toggleManagedFileDownload(id, downloadable){ showLoader('Updating file...'); const res=await apiRequest('setManagedFileDownloadable',{id, downloadable},'POST'); hideLoader(); setStatus('managedFileStatus',res.message,res.ok); if(res.ok) await loadManagedFiles(); }
+async function deleteManagedFile(id){ if(!confirm('Delete this managed file? You can restore it later.')) return; showLoader('Deleting file...'); const res=await apiRequest('deleteManagedFile',{id},'POST'); hideLoader(); setStatus('managedFileStatus',res.message,res.ok); if(res.ok) await loadManagedFiles(); }
+async function restoreManagedFile(id){ showLoader('Restoring file...'); const res=await apiRequest('restoreManagedFile',{id},'POST'); hideLoader(); setStatus('managedFileStatus',res.message,res.ok); if(res.ok) await loadManagedFiles(); }
+async function hardDeleteManagedFile(id){ if(!confirm('Delete this file forever from the app index?')) return; showLoader('Deleting file forever...'); const res=await apiRequest('hardDeleteManagedFile',{id},'POST'); hideLoader(); setStatus('managedFileStatus',res.message,res.ok); if(res.ok) await loadManagedFiles(); }
+function downloadBulkEmailTemplate(){
+  const csv = ['email','example1@school.com','example2@school.com'].join('\n');
+  downloadText('bulk_email_template.csv', csv);
+  setStatus('bulkEmailStatus','Email CSV template downloaded.', true);
+}
+function chooseBulkEmailCsv(){ const input=$("bulkEmailCsvFile"); if(input) input.click(); }
+function updateBulkEmailCsvName(){ if(!$("bulkEmailCsvName") || !$("bulkEmailCsvFile")) return; const file=$("bulkEmailCsvFile").files[0]; $("bulkEmailCsvName").textContent = file ? file.name : 'No CSV selected yet.'; }
+async function sendBulkEmailNow(){
+  const file=$("bulkEmailCsvFile").files[0];
+  let csvText='';
+  if(file) csvText=(await fileToText(file)).trim();
+  showLoader('Sending bulk email...');
+  const res=await apiRequest('sendBulkEmail',{
+    manualEmails: $("bulkEmailManual").value,
+    csvText,
+    subject: $("bulkEmailSubject").value.trim(),
+    body: $("bulkEmailBody").value
+  },'POST');
+  hideLoader();
+  setStatus('bulkEmailStatus',res.message,res.ok);
+}
+
 $("loginBtn").addEventListener("click", loginAdmin);
 $("signupBtn").addEventListener("click", signupAdmin);
 $("forgotBtn").addEventListener("click", forgotAdminPassword);
@@ -2031,6 +2583,11 @@ if($("downloadCandidatesTemplateBtn")) $("downloadCandidatesTemplateBtn").addEve
 $("exportCandidatesPdfBtn").addEventListener("click", exportCandidatesPdf);
 $("generateAccountsBtn").addEventListener("click", generateAccounts);
 if($("createSubadminBtn")) $("createSubadminBtn").addEventListener("click", createSubadmin);
+if($("saveStudentEditorBtn")) $("saveStudentEditorBtn").addEventListener("click", saveStudentEditor);
+if($("cancelStudentEditorBtn")) $("cancelStudentEditorBtn").addEventListener("click", closeStudentEditor);
+attachImageUrlNormalizer('candidatePassportUrl');
+attachImageUrlNormalizer('studentEditorPassportUrl');
+attachImageUrlNormalizer('imageUrl');
 if($("usersCreateSubadminBtn")) $("usersCreateSubadminBtn").addEventListener("click", createSubadmin);
 $("downloadGeneratedBtn").addEventListener("click", downloadLastGenerated);
 $("questionExamSelect").addEventListener("change", function(){ resetQuestionForm(); loadQuestionsForSelectedExam(); });
@@ -2053,16 +2610,47 @@ $("loadResultsBtn").addEventListener("click", loadResultsByExam);
 if($("resultsShowDeleted")) $("resultsShowDeleted").addEventListener("change", loadResultsByExam);
 if($("selectAllResultsBtn")) $("selectAllResultsBtn").addEventListener("click", selectAllVisibleResults);
 if($("publishSelectedResultsBtn")) $("publishSelectedResultsBtn").addEventListener("click", ()=>runBulkResultAction("bulkSetResultPublished",{ published:true }));
+if($("sendBulkEmailBtn")) $("sendBulkEmailBtn").addEventListener("click", sendBulkEmailNow);
+if($("downloadBulkEmailTemplateBtn")) $("downloadBulkEmailTemplateBtn").addEventListener("click", downloadBulkEmailTemplate);
+if($("chooseBulkEmailCsvBtn")) $("chooseBulkEmailCsvBtn").addEventListener("click", chooseBulkEmailCsv);
+if($("bulkEmailCsvFile")) $("bulkEmailCsvFile").addEventListener("change", updateBulkEmailCsvName);
+if($("uploadManagedFileBtn")) $("uploadManagedFileBtn").addEventListener("click", uploadManagedFile);
+if($("reimportDriveFilesBtn")) $("reimportDriveFilesBtn").addEventListener("click", reimportDriveFiles);
+if($("refreshManagedFilesBtn")) $("refreshManagedFilesBtn").addEventListener("click", refreshManagedFiles);
+if($("toggleAllManagedFilesBtn")) $("toggleAllManagedFilesBtn").addEventListener("click", toggleAllManagedFilesSelection);
+if($("enableDownloadSelectedManagedFilesBtn")) $("enableDownloadSelectedManagedFilesBtn").addEventListener("click", ()=>runBulkManagedFileAction('enableDownload'));
+if($("disableDownloadSelectedManagedFilesBtn")) $("disableDownloadSelectedManagedFilesBtn").addEventListener("click", ()=>runBulkManagedFileAction('disableDownload'));
+if($("deleteSelectedManagedFilesBtn")) $("deleteSelectedManagedFilesBtn").addEventListener("click", ()=>runBulkManagedFileAction('delete'));
+if($("restoreSelectedManagedFilesBtn")) $("restoreSelectedManagedFilesBtn").addEventListener("click", ()=>runBulkManagedFileAction('restore'));
+if($("hardDeleteSelectedManagedFilesBtn")) $("hardDeleteSelectedManagedFilesBtn").addEventListener("click", ()=>runBulkManagedFileAction('hardDelete'));
+if($("toggleAllStudentsBtn")) $("toggleAllStudentsBtn").addEventListener("click", toggleAllStudentsSelection);
+if($("activateSelectedStudentsBtn")) $("activateSelectedStudentsBtn").addEventListener("click", ()=>runBulkStudentAction('activate'));
+if($("deactivateSelectedStudentsBtn")) $("deactivateSelectedStudentsBtn").addEventListener("click", ()=>runBulkStudentAction('deactivate'));
+if($("resetPasswordSelectedStudentsBtn")) $("resetPasswordSelectedStudentsBtn").addEventListener("click", ()=>runBulkStudentAction('resetPassword'));
+if($("deleteSelectedStudentsBtn")) $("deleteSelectedStudentsBtn").addEventListener("click", ()=>runBulkStudentAction('delete'));
+if($("restoreSelectedStudentsBtn")) $("restoreSelectedStudentsBtn").addEventListener("click", ()=>runBulkStudentAction('restore'));
+if($("hardDeleteSelectedStudentsBtn")) $("hardDeleteSelectedStudentsBtn").addEventListener("click", ()=>runBulkStudentAction('hardDelete'));
+attachImageUrlNormalizer('resultBrandLogoUrl');
+attachImageUrlNormalizer('siteFaviconUrl');
+attachImageUrlNormalizer('resultSignatureUrl');
+attachImageUrlNormalizer('ceoImageUrl');
+attachBrandingImageUploader('resultBrandLogoUrl','resultBrandLogoUrl','Site Logo');
+attachBrandingImageUploader('siteFaviconUrl','siteFaviconUrl','Favicon');
+attachBrandingImageUploader('resultSignatureUrl','resultSignatureUrl','Signature Image');
+attachBrandingImageUploader('ceoImageUrl','ceoImageUrl','CEO Image');
+attachDriveImageUploader('candidatePassportUrl', { action:'uploadStudentPassport', label:'Student Passport', statusId:'candidateStatus', buildPayload: () => ({ regId: $("candidateRegId")?.value.trim() || '', fullName: $("candidateName")?.value.trim() || '' }) });
+attachDriveImageUploader('studentEditorPassportUrl', { action:'uploadStudentPassport', label:'Student Passport', statusId:'studentEditorStatus', buildPayload: () => ({ regId: $("studentEditorRegId")?.value.trim() || '', fullName: $("studentEditorFullName")?.value.trim() || '' }) });
+attachDriveImageUploader('imageUrl', { action:'uploadQuestionImage', label:'Question Image', statusId:'questionStatus', buildPayload: () => ({ examCode: $("questionExamSelect")?.value.trim() || 'general', question: $("questionText")?.value.trim() || '' }) });
 if($("hideSelectedResultsBtn")) $("hideSelectedResultsBtn").addEventListener("click", ()=>runBulkResultAction("bulkSetResultPublished",{ published:false }));
 if($("deleteSelectedResultsBtn")) $("deleteSelectedResultsBtn").addEventListener("click", ()=>runBulkResultAction("bulkDeleteResults", {}, "Delete selected results?"));
 if($("restoreSelectedResultsBtn")) $("restoreSelectedResultsBtn").addEventListener("click", ()=>runBulkResultAction("bulkRestoreResults"));
 if($("hardDeleteSelectedResultsBtn")) $("hardDeleteSelectedResultsBtn").addEventListener("click", ()=>runBulkResultAction("bulkHardDeleteResults", {}, "Delete selected results forever? This cannot be undone."));
 $("exportResultsBtn").addEventListener("click", exportResultsByExam);
 $("exportResultsPdfBtn").addEventListener("click", exportResultsPdf);
-if($("loadSnapshotsBtn")) $("loadSnapshotsBtn").addEventListener("click", loadSnapshots);
-if($("loadAudioBtn")) $("loadAudioBtn").addEventListener("click", loadAudio);
-if($("loadVideosBtn")) $("loadVideosBtn").addEventListener("click", loadVideos);
-if($("loadScreensBtn")) $("loadScreensBtn").addEventListener("click", loadScreens);
+if($("loadSnapshotsBtn")) $("loadSnapshotsBtn").addEventListener("click", ()=>openEvidenceFolder("snapshot"));
+if($("loadAudioBtn")) $("loadAudioBtn").addEventListener("click", ()=>openEvidenceFolder("audio"));
+if($("loadVideosBtn")) $("loadVideosBtn").addEventListener("click", ()=>openEvidenceFolder("video"));
+if($("loadScreensBtn")) $("loadScreensBtn").addEventListener("click", ()=>openEvidenceFolder("screen"));
 if($("snapshotsShowDeleted")) $("snapshotsShowDeleted").addEventListener("change", ()=>{ if($("snapshotsBox").innerHTML) loadSnapshots(); if($("audioBox").innerHTML) loadAudio(); if($("videosBox").innerHTML) loadVideos(); if($("screenBox") && $("screenBox").innerHTML) loadScreens(); });
 if($("selectAllSnapshotsBtn")) $("selectAllSnapshotsBtn").addEventListener("click", selectAllVisibleSnapshots);
 if($("deleteSelectedSnapshotsBtn")) $("deleteSelectedSnapshotsBtn").addEventListener("click", ()=>runBulkSnapshotAction("bulkDeleteSnapshots","Delete selected snapshots?"));

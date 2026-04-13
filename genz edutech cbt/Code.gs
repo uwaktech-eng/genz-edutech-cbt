@@ -1,4 +1,4 @@
-const SPREADSHEET_ID = '1gx-012b0Jp8qavy_xyn8FeaAjEsEHQcSZ9nUQY2Qc2k';
+const SPREADSHEET_ID = '11mblw80XInjSn2Bgjv7bXO_zSkIf-egjKJX7hk0Gw1o';
 const ADMIN_SIGNUP_KEY = '1234';
 const SESSION_HOURS = 12;
 const ROOT_FOLDER_NAME = 'Genz CBT System Storage';
@@ -15,7 +15,8 @@ const SHEETS = {
   RESULTS: 'Results',
   PROGRESS: 'Progress',
   DRIVE_FILES: 'DriveFiles',
-  ACTION_SESSIONS: 'ActionSessions'
+  ACTION_SESSIONS: 'ActionSessions',
+  SUBMISSION_QUEUE: 'SubmissionQueue'
 };
 
 const HEADERS = {};
@@ -30,19 +31,17 @@ HEADERS[SHEETS.RESULTS] = ['Id', 'Timestamp', 'ExamCode', 'AttemptNo', 'FullName
 HEADERS[SHEETS.PROGRESS] = ['ExamCode', 'RegId', 'FullName', 'RemainingSeconds', 'AnswersJson', 'UpdatedAt'];
 HEADERS[SHEETS.DRIVE_FILES] = ['Id', 'Kind', 'OriginalName', 'DriveFileId', 'DriveUrl', 'ExamCode', 'RegId', 'Username', 'MetaJson', 'CreatedAt', 'IsDeleted', 'DeletedAt', 'DeletedBy', 'RestoredAt', 'RestoredBy'];
 HEADERS[SHEETS.ACTION_SESSIONS] = ['SessionToken', 'Username', 'Role', 'CreatedAt', 'ExpiresAt', 'IsActive'];
+HEADERS[SHEETS.SUBMISSION_QUEUE] = ['Id', 'Timestamp', 'ExamCode', 'RegId', 'FullName', 'Username', 'AttemptNo', 'AnswersJson', 'SummaryJson', 'Status', 'ProcessedAt', 'ResultId', 'PermissionCode'];
 
 function doGet(e) {
   return handleRequest_(e && e.parameter ? e.parameter : {});
 }
 
 function doPost(e) {
-  var params = {};
-  if (e && e.parameter) params = e.parameter;
+  var params = clonePlainObject_(e && e.parameter ? e.parameter : {});
   if (e && e.postData && e.postData.contents) {
-    try {
-      var body = JSON.parse(e.postData.contents);
-      if (body && typeof body === 'object') params = body;
-    } catch (err) {}
+    var bodyParams = parsePostBodyParams_(e.postData.contents);
+    params = mergeRequestMaps_(params, bodyParams);
   }
   return handleRequest_(params || {});
 }
@@ -54,6 +53,7 @@ function handleRequest_(params) {
     var payload = parsePayload_(params.payload);
     payload = mergePayload_(params, payload);
     var result;
+    enforceFreshRequest_(action, payload || {});
 
     switch (action) {
       case 'signup': result = signup_(payload); break;
@@ -68,6 +68,19 @@ function handleRequest_(params) {
 
       case 'getSettings': result = getSettings_(payload); break;
       case 'saveSettings': result = saveSettings_(payload); break;
+      case 'uploadBrandingImage': result = uploadBrandingImage_(payload); break;
+      case 'uploadStudentPassport': result = uploadStudentPassportImage_(payload); break;
+      case 'uploadQuestionImage': result = uploadQuestionImage_(payload); break;
+      case 'authorizeDriveAccess': result = authorizeDriveAccess_(); break;
+      case 'sendBulkEmail': result = sendBulkEmail_(payload); break;
+      case 'uploadManagedFile': result = uploadManagedFile_(payload); break;
+      case 'listManagedFiles': result = listManagedFiles_(payload); break;
+      case 'setManagedFileDownloadable': result = setManagedFileDownloadable_(payload); break;
+      case 'deleteManagedFile': result = deleteManagedFile_(payload); break;
+      case 'restoreManagedFile': result = restoreManagedFile_(payload); break;
+      case 'hardDeleteManagedFile': result = hardDeleteManagedFile_(payload); break;
+      case 'reimportDriveFiles': result = reimportDriveFiles_(payload); break;
+      case 'refreshManagedFiles': result = refreshManagedFiles_(payload); break;
 
       case 'createExam': result = createExam_(payload); break;
       case 'listExams': result = listExams_(payload); break;
@@ -89,6 +102,7 @@ function handleRequest_(params) {
       case 'generateStudentAccounts': result = generateStudentAccounts_(payload); break;
       case 'listAdmins': result = listAdmins_(payload); break;
       case 'listStudents': result = listStudents_(payload); break;
+      case 'updateStudentDetails': result = updateStudentDetails_(payload); break;
       case 'setUserActive': result = setUserActive_(payload); break;
       case 'deleteUser': result = deleteUser_(payload); break;
       case 'restoreUser': result = restoreUser_(payload); break;
@@ -120,6 +134,7 @@ function handleRequest_(params) {
       case 'uploadAudioClip': result = uploadAudioClip_(payload); break;
       case 'uploadVideoClip': result = uploadVideoClip_(payload); break;
       case 'uploadScreenClip': result = uploadScreenClip_(payload); break;
+      case 'ensureProctoringFolders': result = ensureProctoringFolders_(payload); break;
 
       case 'listResultsByExam': result = listResultsByExam_(payload); break;
       case 'setResultPublished': result = setResultPublished_(payload); break;
@@ -138,7 +153,16 @@ function handleRequest_(params) {
       case 'bulkRestoreSnapshots': result = bulkRestoreSnapshots_(payload); break;
       case 'bulkHardDeleteSnapshots': result = bulkHardDeleteSnapshots_(payload); break;
       case 'listAudioByExam': result = listAudioByExam_(payload); break;
+      case 'listScreenByExam': result = listScreenByExam_(payload); break;
       case 'listVideosByExam': result = listVideosByExam_(payload); break;
+      case 'listScreensByExam': result = listScreensByExam_(payload); break;
+      case 'listScreenByExam': result = listScreensByExam_(payload); break;
+      case 'deleteAudio': result = deleteAudio_(payload); break;
+      case 'restoreAudio': result = restoreAudio_(payload); break;
+      case 'hardDeleteAudio': result = hardDeleteAudio_(payload); break;
+      case 'deleteScreen': result = deleteScreen_(payload); break;
+      case 'restoreScreen': result = restoreScreen_(payload); break;
+      case 'hardDeleteScreen': result = hardDeleteScreen_(payload); break;
       case 'getProctoringFolderView': result = getProctoringFolderView_(payload); break;
       case 'deleteVideo': result = deleteVideo_(payload); break;
       case 'restoreVideo': result = restoreVideo_(payload); break;
@@ -151,6 +175,7 @@ function handleRequest_(params) {
       case 'checkResultPublicById': result = checkResultPublicById_(payload); break;
       case 'listPublishedResultsForStudent': result = listPublishedResultsForStudent_(payload); break;
       case 'getPublicSiteContent': result = getPublicSiteContent_(payload); break;
+      case 'getImageDataUrl': result = getImageDataUrl_(payload); break;
 
       default:
         result = response_(false, 'Invalid or missing action.');
@@ -165,6 +190,44 @@ function parsePayload_(raw) {
   if (!raw) return {};
   if (typeof raw === 'object') return raw;
   try { return JSON.parse(raw); } catch (err) { return {}; }
+}
+
+function clonePlainObject_(value) {
+  var out = {};
+  if (!value || typeof value !== 'object') return out;
+  for (var key in value) out[key] = value[key];
+  return out;
+}
+
+function mergeRequestMaps_(base, extra) {
+  var out = clonePlainObject_(base);
+  if (!extra || typeof extra !== 'object') return out;
+  for (var key in extra) {
+    if (out[key] === undefined || out[key] === null || out[key] === '') out[key] = extra[key];
+  }
+  return out;
+}
+
+function parsePostBodyParams_(raw) {
+  if (!raw) return {};
+  if (typeof raw === 'object') return clonePlainObject_(raw);
+  var text = String(raw);
+  try {
+    var parsed = JSON.parse(text);
+    if (parsed && typeof parsed === 'object') return parsed;
+  } catch (err) {}
+  var out = {};
+  text.split('&').forEach(function(part) {
+    if (!part) return;
+    var idx = part.indexOf('=');
+    var key = idx >= 0 ? part.slice(0, idx) : part;
+    var value = idx >= 0 ? part.slice(idx + 1) : '';
+    key = decodeURIComponent(String(key || '').replace(/\+/g, ' '));
+    value = decodeURIComponent(String(value || '').replace(/\+/g, ' '));
+    if (!key) return;
+    if (out[key] === undefined || out[key] === null || out[key] === '') out[key] = value;
+  });
+  return out;
 }
 
 function mergePayload_(params, payload) {
@@ -186,6 +249,47 @@ function response_(ok, message, data) {
   return { ok: !!ok, message: message || '', data: data || null };
 }
 
+function requestTimestampMs_(value) {
+  var raw = trim_(value);
+  if (!raw) return NaN;
+  if (/^\d{10,13}$/.test(raw)) {
+    var n = Number(raw);
+    return raw.length === 10 ? n * 1000 : n;
+  }
+  var t = new Date(raw).getTime();
+  return isFinite(t) ? t : NaN;
+}
+
+function shouldBypassFreshRequest_(action) {
+  var allow = {
+    signup: true,
+    login: true,
+    logout: true,
+    validateSession: true,
+    getCurrentExamPublic: true,
+    getPublicSiteContent: true,
+    checkResultPublic: true,
+    checkResultPublicById: true,
+    listPublishedResultsForStudent: true,
+    getImageDataUrl: true
+  };
+  return !!allow[trim_(action)];
+}
+
+function enforceFreshRequest_(action, payload) {
+  if (shouldBypassFreshRequest_(action)) return;
+  var ts = requestTimestampMs_(payload.timestamp || payload.requestTime || payload.ts);
+  if (!isFinite(ts)) throw new Error('Request timestamp is missing or invalid.');
+  var maxSkewMs = Math.max(60000, Math.min(600000, toNum_(getSettingsMap_()['Request Freshness Window Seconds'], 180) * 1000));
+  if (Math.abs(Date.now() - ts) > maxSkewMs) throw new Error('This request expired. Refresh the page and try again.');
+  var nonce = trim_(payload.nonce || payload.requestId);
+  if (!nonce) throw new Error('Secure request nonce is missing.');
+  var cache = CacheService.getScriptCache();
+  var key = 'nonce:' + nonce;
+  if (cache.get(key)) throw new Error('This request has already been used.');
+  cache.put(key, '1', Math.max(60, Math.floor(maxSkewMs / 1000)));
+}
+
 function nowIso_() {
   return Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm:ss');
 }
@@ -194,14 +298,49 @@ function trim_(value) {
   return String(value == null ? '' : value).trim();
 }
 
+function unwrapImageInput_(value) {
+  var raw = trim_(value);
+  if (!raw) return '';
+  var match = raw.match(/<img\b[^>]*\bsrc\s*=\s*(["'])(.*?)\1/i);
+  if (!match) match = raw.match(/<img\b[^>]*\bsrc\s*=\s*([^\s>]+)/i);
+  if (match) return trim_(match[2] || match[1]);
+  match = raw.match(/url\(\s*(["']?)(.*?)\1\s*\)/i);
+  if (match && match[2]) return trim_(match[2]);
+  return raw;
+}
+
 function normalizeImageUrl_(value) {
-  var url = trim_(value);
+  var url = unwrapImageInput_(value);
   if (!url) return '';
   var match = url.match(/drive\.google\.com\/file\/d\/([^\/]+)/i);
-  if (!match) match = url.match(/[?&]id=([^&]+)/i);
   if (!match) match = url.match(/drive\.google\.com\/open\?id=([^&]+)/i);
-  if (!match) match = url.match(/uc\?export=(?:view|download)&id=([^&]+)/i);
-  if (match && match[1]) return 'https://drive.google.com/uc?export=view&id=' + match[1];
+  if (!match) match = url.match(/drive\/folders\/([^\/?#]+)/i);
+  if (!match) match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
+  if (!match) match = url.match(/uc\?export=(?:view|download)&id=([a-zA-Z0-9_-]+)/i);
+  if (!match) match = url.match(/thumbnail\?[^#]*id=([a-zA-Z0-9_-]+)/i);
+  if (!match) match = url.match(/drive\.usercontent\.google\.com\/(?:download|u\/\d+\/uc)\?[^#]*id=([a-zA-Z0-9_-]+)/i);
+  if (!match && /^[A-Za-z0-9_-]{20,}$/.test(url)) match = [url, url];
+  if (match && match[1]) return 'https://drive.google.com/thumbnail?id=' + match[1] + '&sz=w2000';
+
+  if (/dropbox\.com/i.test(url)) {
+    url = url.replace(/\?dl=0$/i, '?raw=1');
+    url = url.replace(/\?dl=1$/i, '?raw=1');
+    if (!/[?&]raw=1/i.test(url)) url += (url.indexOf('?') === -1 ? '?' : '&') + 'raw=1';
+    return url;
+  }
+
+  var githubBlob = url.match(/^https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)$/i);
+  if (githubBlob) {
+    return 'https://raw.githubusercontent.com/' + githubBlob[1] + '/' + githubBlob[2] + '/' + githubBlob[3] + '/' + githubBlob[4];
+  }
+
+  var onedrive = url.match(/^https:\/\/1drv\.ms\//i);
+  if (onedrive) {
+    try {
+      return 'https://api.onedrive.com/v1.0/shares/u!' + Utilities.base64EncodeWebSafe(url) + '/root/content';
+    } catch (err) {}
+  }
+
   return url;
 }
 
@@ -241,6 +380,12 @@ function normalizeMediaObjectUrls_(list) {
     return out;
   });
 }
+
+function normalizeMediaJsonText_(raw) {
+  var arr = parseJsonArraySafe_(raw);
+  return JSON.stringify(normalizeMediaObjectUrls_(arr));
+}
+
 
 function toMultilineText_(value) {
   return String(value == null ? '' : value).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
@@ -341,7 +486,8 @@ function getPublicSiteContent_() {
     contactAddress: toMultilineText_(map['Contact Address']),
     termsContent: toMultilineText_(map['Terms Content']),
     privacyContent: toMultilineText_(map['Privacy Content']),
-    cookiesContent: toMultilineText_(map['Cookies Content'])
+    cookiesContent: toMultilineText_(map['Cookies Content']),
+    publicContentVersion: trim_(map['Public Site Content Version']) || ''
   });
 }
 
@@ -420,7 +566,15 @@ function ensureSystem_() {
     'Terms Content': 'Add your terms and conditions here from the admin portal.',
     'Privacy Content': 'Add your privacy policy here from the admin portal.',
     'Cookies Content': 'Add your cookies policy here from the admin portal.',
-    'Subadmin Action Token TTL Minutes': '60'
+    'Subadmin Action Token TTL Minutes': '60',
+    'Request Freshness Window Seconds': '180',
+    'Exam Snapshot Interval Seconds': '180',
+    'Max Upload Size MB': '8',
+    'Drive Backup CSV Uploads': 'false',
+    'Drive Backup Results Exports': 'true',
+    'Bulk Email Batch Size': '20',
+    'Bulk Email Max Recipients Per Send': '150',
+    'Default File Downloadable': 'true'
   };
   var settingsMap = getSettingsMap_();
   for (var key in defaults) {
@@ -432,6 +586,393 @@ function authorizeDriveAccess_() {
   ensureSystem_();
   var folder = getRootFolder_();
   return 'Drive authorization completed. Root folder: ' + folder.getName();
+}
+
+
+function getBrandingImageTargetMap_() {
+  return {
+    resultBrandLogoUrl: 'Result Brand Logo URL',
+    resultSignatureUrl: 'Result Signature URL',
+    siteFaviconUrl: 'Site Favicon URL',
+    ceoImageUrl: 'CEO Image URL'
+  };
+}
+
+function resolveBrandingImageSettingKey_(value) {
+  var raw = trim_(value);
+  if (!raw) return '';
+  var map = getBrandingImageTargetMap_();
+  if (map[raw]) return map[raw];
+  for (var key in map) {
+    if (map.hasOwnProperty(key) && normalize_(map[key]) === normalize_(raw)) return map[key];
+  }
+  return '';
+}
+
+function getBrandingImageFolderLabel_(settingKey) {
+  switch (settingKey) {
+    case 'Result Brand Logo URL': return 'Site Logo';
+    case 'Result Signature URL': return 'Signature';
+    case 'Site Favicon URL': return 'Favicon';
+    case 'CEO Image URL': return 'CEO Image';
+    default: return 'Branding Image';
+  }
+}
+
+function buildDriveImageUrls_(fileId) {
+  var id = trim_(fileId);
+  return {
+    fileId: id,
+    thumbnailUrl: id ? ('https://drive.google.com/thumbnail?id=' + id + '&sz=w2000') : '',
+    viewUrl: id ? ('https://drive.google.com/uc?export=view&id=' + id) : '',
+    previewUrl: id ? ('https://drive.google.com/file/d/' + id + '/preview') : ''
+  };
+}
+
+function uploadBrandingImage_(payload) {
+  var actor = requireAdminAction_(payload, true).user;
+  var settingKey = resolveBrandingImageSettingKey_(payload.targetKey || payload.target || payload.settingKey || payload.fieldId);
+  var fileName = trim_(payload.fileName || payload.originalName);
+  var mimeType = trim_(payload.mimeType) || 'application/octet-stream';
+  var base64Data = trim_(payload.fileData || payload.base64Data);
+  if (!settingKey) return response_(false, 'Select a valid branding image target.');
+  if (!fileName || !base64Data) return response_(false, 'Choose an image file to upload.');
+  if (!/^image\//i.test(mimeType) && !/icon/i.test(mimeType)) return response_(false, 'Only image files can be uploaded here.');
+  assertUploadWithinLimit_(base64Data, 0);
+  var bytes = Utilities.base64Decode(base64Data);
+  if (!bytes || !bytes.length) return response_(false, 'Invalid image data.');
+  var folderLabel = getBrandingImageFolderLabel_(settingKey);
+  var folder = getNestedFolder_(['Branding Assets', folderLabel]);
+  var finalName = fileName || (safeName_(folderLabel.toLowerCase()) + '.png');
+  var blob = Utilities.newBlob(bytes, mimeType, finalName);
+  var file = folder.createFile(blob);
+  try {
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch (err) {
+    try { file.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW); } catch (innerErr) {}
+  }
+  var links = buildDriveImageUrls_(file.getId());
+  upsertSetting_(settingKey, links.thumbnailUrl || links.viewUrl || file.getUrl());
+  upsertSetting_('Public Site Content Version', new Date().toISOString());
+  logDriveFile_('branding_image', finalName, file, '', '', actor.Username, {
+    settingKey: settingKey,
+    folderName: folderLabel,
+    mimeType: mimeType,
+    sizeBytes: bytes.length,
+    uploadedBy: actor.Username
+  });
+  return response_(true, folderLabel + ' uploaded successfully. The public site setting was updated.', {
+    settingKey: settingKey,
+    fieldId: payload.targetKey || payload.target || '',
+    fileId: file.getId(),
+    driveUrl: file.getUrl(),
+    savedUrl: links.thumbnailUrl || links.viewUrl || file.getUrl(),
+    thumbnailUrl: links.thumbnailUrl,
+    viewUrl: links.viewUrl,
+    previewUrl: links.previewUrl
+  });
+}
+
+
+function extractDriveFileId_(value) {
+  var raw = trim_(value);
+  if (!raw) return '';
+  var match = raw.match(/drive\.google\.com\/file\/d\/([^\/?#]+)/i);
+  if (!match) match = raw.match(/drive\.google\.com\/open\?id=([^&]+)/i);
+  if (!match) match = raw.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
+  if (!match) match = raw.match(/thumbnail\?[^#]*id=([a-zA-Z0-9_-]+)/i);
+  if (!match) match = raw.match(/uc\?export=(?:view|download)&id=([a-zA-Z0-9_-]+)/i);
+  if (!match) match = raw.match(/drive\.usercontent\.google\.com\/(?:download|u\/\d+\/uc)\?[^#]*id=([a-zA-Z0-9_-]+)/i);
+  if (!match && /^[A-Za-z0-9_-]{20,}$/.test(raw)) match = [raw, raw];
+  return match && match[1] ? trim_(match[1]) : '';
+}
+
+
+function normalizePublicImageUrl_(value) {
+  var raw = trim_(value);
+  if (!raw) return '';
+  var wrapped = raw.match(/<img\b[^>]*\bsrc\s*=\s*(["'])(.*?)\1/i);
+  if (!wrapped) wrapped = raw.match(/<img\b[^>]*\bsrc\s*=\s*([^\s>]+)/i);
+  if (wrapped) raw = trim_(wrapped[2] || wrapped[1] || '');
+  var cssUrl = raw.match(/url\(\s*(["']?)(.*?)\1\s*\)/i);
+  if (cssUrl && cssUrl[2]) raw = trim_(cssUrl[2]);
+  if (!raw) return '';
+  var driveId = extractDriveFileId_(raw);
+  if (driveId) return 'https://drive.google.com/thumbnail?id=' + driveId + '&sz=w2000';
+  if (/dropbox\.com/i.test(raw)) {
+    var next = raw.replace(/\?dl=0$/i, '?raw=1').replace(/\?dl=1$/i, '?raw=1');
+    if (!/[?&]raw=1/i.test(next)) next += (next.indexOf('?') >= 0 ? '&' : '?') + 'raw=1';
+    return next;
+  }
+  var gh = raw.match(/^https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)$/i);
+  if (gh) return 'https://raw.githubusercontent.com/' + gh[1] + '/' + gh[2] + '/' + gh[3] + '/' + gh[4];
+  return raw;
+}
+
+function buildPublicImageCandidates_(value) {
+  var raw = trim_(value);
+  if (!raw) return [];
+  var out = [];
+  function push(nextValue) {
+    var next = trim_(nextValue);
+    if (next && out.indexOf(next) === -1) out.push(next);
+  }
+  push(normalizePublicImageUrl_(raw));
+  var driveId = extractDriveFileId_(raw);
+  if (driveId) {
+    push('https://drive.google.com/thumbnail?id=' + driveId + '&sz=w2000');
+    push('https://drive.google.com/uc?export=view&id=' + driveId);
+    push('https://drive.google.com/uc?id=' + driveId);
+    push('https://drive.usercontent.google.com/download?id=' + driveId + '&export=view&authuser=0');
+  }
+  push(raw);
+  return out;
+}
+
+function guessMimeTypeFromName_(name) {
+  var lower = trim_(name).toLowerCase();
+  if (/\.png$/i.test(lower)) return 'image/png';
+  if (/\.(jpg|jpeg)$/i.test(lower)) return 'image/jpeg';
+  if (/\.webp$/i.test(lower)) return 'image/webp';
+  if (/\.gif$/i.test(lower)) return 'image/gif';
+  if (/\.svg$/i.test(lower)) return 'image/svg+xml';
+  if (/\.bmp$/i.test(lower)) return 'image/bmp';
+  return 'application/octet-stream';
+}
+
+function getImageDataUrl_(payload) {
+  var raw = trim_((payload && (payload.url || payload.imageUrl || payload.src || payload.fileId)) || '');
+  if (!raw) return response_(false, 'Provide an image URL or file ID.');
+  var driveId = extractDriveFileId_(raw);
+  var blob = null;
+  var source = '';
+  var mimeType = '';
+  var safeMimePattern = /^(image\/(png|jpe?g|webp|gif|bmp|svg\+xml))$/i;
+
+  if (driveId) {
+    var candidatesForDrive = buildPublicImageCandidates_(driveId);
+    for (var d = 0; d < candidatesForDrive.length; d += 1) {
+      var driveCandidate = candidatesForDrive[d];
+      if (!driveCandidate) continue;
+      try {
+        var driveFetched = UrlFetchApp.fetch(driveCandidate, {
+          muteHttpExceptions: true,
+          followRedirects: true,
+          headers: {
+            'User-Agent': 'Mozilla/5.0',
+            'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
+          }
+        });
+        var driveCode = Number(driveFetched.getResponseCode() || 0);
+        if (driveCode >= 200 && driveCode < 300) {
+          var driveFetchedBlob = driveFetched.getBlob();
+          var driveFetchedType = trim_(driveFetchedBlob.getContentType()) || trim_(driveFetched.getHeaders()['Content-Type']);
+          if (safeMimePattern.test(driveFetchedType)) {
+            blob = driveFetchedBlob;
+            mimeType = driveFetchedType;
+            source = 'drive_public';
+            break;
+          }
+        }
+      } catch (driveFetchErr) {}
+    }
+  }
+
+  if (!blob) {
+    try {
+      if (driveId) {
+        var file = DriveApp.getFileById(driveId);
+        blob = file.getBlob();
+        source = 'drive';
+        if ((!blob.getContentType() || !/^image\//i.test(blob.getContentType())) && trim_(file.getName())) {
+          blob = blob.setContentTypeFromExtension();
+        }
+        mimeType = trim_(blob.getContentType());
+      }
+    } catch (driveErr) {}
+  }
+
+  if (!blob) {
+    var candidates = buildPublicImageCandidates_(raw);
+    for (var i = 0; i < candidates.length; i += 1) {
+      var candidate = candidates[i];
+      if (!candidate) continue;
+      try {
+        var fetched = UrlFetchApp.fetch(candidate, {
+          muteHttpExceptions: true,
+          followRedirects: true,
+          headers: {
+            'User-Agent': 'Mozilla/5.0',
+            'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
+          }
+        });
+        var code = Number(fetched.getResponseCode() || 0);
+        if (code >= 200 && code < 300) {
+          var fetchedBlob = fetched.getBlob();
+          var contentType = trim_(fetchedBlob.getContentType()) || trim_(fetched.getHeaders()['Content-Type']);
+          if (/^image\//i.test(contentType)) {
+            blob = fetchedBlob;
+            mimeType = contentType;
+            source = 'url';
+            break;
+          }
+        }
+      } catch (fetchErr) {}
+    }
+  }
+
+  if (!blob) return response_(false, 'Unable to load that image for PDF export.');
+
+  mimeType = trim_(mimeType || blob.getContentType());
+  if (!/^image\//i.test(mimeType)) {
+    mimeType = guessMimeTypeFromName_(raw);
+    try { blob = blob.setContentType(mimeType); } catch (setErr) {}
+  }
+
+  if (!safeMimePattern.test(mimeType) && driveId) {
+    var safeCandidates = buildPublicImageCandidates_(driveId);
+    for (var j = 0; j < safeCandidates.length; j += 1) {
+      var safeCandidate = safeCandidates[j];
+      if (!safeCandidate) continue;
+      try {
+        var safeFetched = UrlFetchApp.fetch(safeCandidate, {
+          muteHttpExceptions: true,
+          followRedirects: true,
+          headers: {
+            'User-Agent': 'Mozilla/5.0',
+            'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
+          }
+        });
+        var safeCode = Number(safeFetched.getResponseCode() || 0);
+        if (safeCode >= 200 && safeCode < 300) {
+          var safeBlob = safeFetched.getBlob();
+          var safeType = trim_(safeBlob.getContentType()) || trim_(safeFetched.getHeaders()['Content-Type']);
+          if (safeMimePattern.test(safeType)) {
+            blob = safeBlob;
+            mimeType = safeType;
+            source = 'drive_public_safe';
+            break;
+          }
+        }
+      } catch (safeErr) {}
+    }
+  }
+
+  if (!/^image\//i.test(mimeType)) return response_(false, 'The selected file is not an image.');
+  var bytes = blob.getBytes();
+  if (!bytes || !bytes.length) return response_(false, 'Image data is empty.');
+  return response_(true, 'Image loaded.', {
+    source: source || (driveId ? 'drive' : 'url'),
+    mimeType: mimeType,
+    byteLength: bytes.length,
+    dataUrl: 'data:' + mimeType + ';base64,' + Utilities.base64Encode(bytes)
+  });
+}
+
+function createPublicImageFile_(folderParts, fileName, mimeType, base64Data) {
+  var bytes = Utilities.base64Decode(trim_(base64Data));
+  if (!bytes || !bytes.length) throw new Error('Invalid image data.');
+  var folder = getNestedFolder_(folderParts);
+  var blob = Utilities.newBlob(bytes, mimeType || 'application/octet-stream', fileName || ('image_' + Utilities.getUuid()));
+  var file = folder.createFile(blob);
+  try {
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch (err) {
+    try { file.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW); } catch (innerErr) {}
+  }
+  return file;
+}
+
+function uploadStudentPassportImage_(payload) {
+  var actor = requireAdminAction_(payload, true).user;
+  var fileName = trim_(payload.fileName || payload.originalName);
+  var mimeType = trim_(payload.mimeType) || 'application/octet-stream';
+  var base64Data = trim_(payload.fileData || payload.base64Data);
+  var regId = trim_(payload.regId || payload.studentRegId || 'General');
+  var fullName = trim_(payload.fullName || payload.studentName);
+  if (!fileName || !base64Data) return response_(false, 'Choose a passport image to upload.');
+  if (!/^image\//i.test(mimeType) && !/icon/i.test(mimeType)) return response_(false, 'Only image files can be uploaded here.');
+  assertUploadWithinLimit_(base64Data, 0);
+  var file = createPublicImageFile_(['Student Passports', safeName_(regId || 'General')], fileName, mimeType, base64Data);
+  var links = buildDriveImageUrls_(file.getId());
+  logDriveFile_('student_passport', file.getName(), file, '', regId, actor.Username, {
+    regId: regId,
+    fullName: fullName,
+    mimeType: mimeType,
+    uploadedBy: actor.Username,
+    sizeBytes: Utilities.base64Decode(base64Data).length
+  });
+  return response_(true, 'Student passport uploaded successfully.', {
+    regId: regId,
+    fileId: file.getId(),
+    driveUrl: file.getUrl(),
+    savedUrl: links.viewUrl || links.thumbnailUrl || file.getUrl(),
+    thumbnailUrl: links.thumbnailUrl,
+    viewUrl: links.viewUrl,
+    previewUrl: links.previewUrl
+  });
+}
+
+function uploadQuestionImage_(payload) {
+  var actor = requireAdminAction_(payload, true).user;
+  var examCode = trim_(payload.examCode || payload.exam || 'general');
+  if (examCode) {
+    try { ensureExamExistsForWrite_(examCode); } catch (err) { if (normalize_(examCode) !== 'GENERAL') throw err; }
+  }
+  var fileName = trim_(payload.fileName || payload.originalName);
+  var mimeType = trim_(payload.mimeType) || 'application/octet-stream';
+  var base64Data = trim_(payload.fileData || payload.base64Data);
+  if (!fileName || !base64Data) return response_(false, 'Choose a question image to upload.');
+  if (!/^image\//i.test(mimeType) && !/icon/i.test(mimeType)) return response_(false, 'Only image files can be uploaded here.');
+  assertUploadWithinLimit_(base64Data, 0);
+  var file = createPublicImageFile_(['Admin Uploads', 'Question Images', safeName_(examCode || 'general')], fileName, mimeType, base64Data);
+  var links = buildDriveImageUrls_(file.getId());
+  logDriveFile_('question_image_manual', file.getName(), file, examCode, '', actor.Username, {
+    examCode: examCode,
+    mimeType: mimeType,
+    uploadedBy: actor.Username,
+    sizeBytes: Utilities.base64Decode(base64Data).length
+  });
+  return response_(true, 'Question image uploaded successfully.', {
+    examCode: examCode,
+    fileId: file.getId(),
+    driveUrl: file.getUrl(),
+    savedUrl: links.viewUrl || links.thumbnailUrl || file.getUrl(),
+    thumbnailUrl: links.thumbnailUrl,
+    viewUrl: links.viewUrl,
+    previewUrl: links.previewUrl
+  });
+}
+
+function persistStudentPassportIfPossible_(imageUrl, regId) {
+  imageUrl = normalizeImageUrl_(imageUrl);
+  if (!imageUrl) return '';
+  var driveId = extractDriveFileId_(imageUrl);
+  if (driveId) {
+    var driveLinks = buildDriveImageUrls_(driveId);
+    return driveLinks.thumbnailUrl || driveLinks.viewUrl || imageUrl;
+  }
+  try {
+    var response = UrlFetchApp.fetch(imageUrl, { muteHttpExceptions: true, followRedirects: true, headers: { 'User-Agent': 'Mozilla/5.0' } });
+    var code = response.getResponseCode();
+    if (code >= 200 && code < 300) {
+      var blob = response.getBlob();
+      var contentType = blob.getContentType() || 'image/jpeg';
+      if (/^image\//i.test(contentType)) {
+        var ext = 'jpg';
+        if (/png/i.test(contentType)) ext = 'png';
+        if (/gif/i.test(contentType)) ext = 'gif';
+        if (/webp/i.test(contentType)) ext = 'webp';
+        var folder = getNestedFolder_(['Student Passports', safeName_(regId || 'General')]);
+        var file = folder.createFile(blob.setName('student_passport_' + Utilities.getUuid() + '.' + ext));
+        try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (err) {}
+        logDriveFile_('student_passport', file.getName(), file, '', regId, '', { sourceUrl: imageUrl, regId: regId });
+        var links = buildDriveImageUrls_(file.getId());
+        return links.thumbnailUrl || links.viewUrl || imageUrl;
+      }
+    }
+  } catch (err) {}
+  return imageUrl;
 }
 
 function getObjects_(sheetName) {
@@ -471,7 +1012,85 @@ function appendObject_(sheetName, obj) {
   var sh = getOrCreateSheet_(sheetName);
   var headers = HEADERS[sheetName];
   var row = headers.map(function(key){ return obj[key] != null ? obj[key] : ''; });
-  sh.appendRow(row);
+  sh.getRange(sh.getLastRow() + 1, 1, 1, headers.length).setValues([row]);
+}
+
+function rowValuesForObject_(sheetName, obj) {
+  var headers = HEADERS[sheetName] || [];
+  return headers.map(function(key){ return obj && obj[key] != null ? obj[key] : ''; });
+}
+
+function updateObjectRow_(sheetName, rowNumber, obj) {
+  if (!rowNumber || rowNumber < 2) return;
+  var sh = getOrCreateSheet_(sheetName);
+  var values = rowValuesForObject_(sheetName, obj);
+  sh.getRange(rowNumber, 1, 1, values.length).setValues([values]);
+}
+
+function clearSheetRow_(sheetName, rowNumber) {
+  if (!rowNumber || rowNumber < 2) return;
+  var sh = getOrCreateSheet_(sheetName);
+  sh.getRange(rowNumber, 1, 1, HEADERS[sheetName].length).clearContent();
+}
+
+function upsertObjectByKeys_(sheetName, keys, obj) {
+  keys = Array.isArray(keys) ? keys : [keys];
+  var rows = getObjects_(sheetName);
+  for (var i = 0; i < rows.length; i++) {
+    var matches = true;
+    for (var k = 0; k < keys.length; k++) {
+      if (normalize_(rows[i][keys[k]]) !== normalize_(obj[keys[k]])) {
+        matches = false;
+        break;
+      }
+    }
+    if (matches) {
+      var merged = {};
+      var headers = HEADERS[sheetName] || [];
+      headers.forEach(function(header){
+        merged[header] = obj[header] != null ? obj[header] : rows[i][header];
+      });
+      updateObjectRow_(sheetName, rows[i]._row, merged);
+      merged._row = rows[i]._row;
+      return { row: merged, created: false };
+    }
+  }
+  appendObject_(sheetName, obj);
+  return { row: obj, created: true };
+}
+
+function computeRankingMapForResults_(rows) {
+  var byExam = {};
+  (rows || []).forEach(function(r){
+    if (toBool_(r.IsDeleted)) return;
+    var key = normalize_(r.ExamCode);
+    if (!byExam[key]) byExam[key] = [];
+    byExam[key].push(r);
+  });
+  var rankById = {};
+  for (var examKey in byExam) {
+    var subset = byExam[examKey];
+    subset.sort(function(a, b){
+      var pa = toNum_(a.Percentage, 0), pb = toNum_(b.Percentage, 0);
+      if (pb !== pa) return pb - pa;
+      var sa = toNum_(a.Score, 0), sb = toNum_(b.Score, 0);
+      if (sb !== sa) return sb - sa;
+      return String(a.Timestamp || '').localeCompare(String(b.Timestamp || ''));
+    });
+    var rank = 0;
+    var prevKey = '';
+    for (var i = 0; i < subset.length; i++) {
+      var rankingKey = subset[i].Percentage + '|' + subset[i].Score;
+      if (rankingKey !== prevKey) rank = i + 1;
+      rankById[String(subset[i].Id || '')] = ordinal_(rank);
+      prevKey = rankingKey;
+    }
+  }
+  return rankById;
+}
+
+function appendSubmissionQueue_(entry) {
+  appendObject_(SHEETS.SUBMISSION_QUEUE, entry);
 }
 
 function upsertSetting_(key, value) {
@@ -513,6 +1132,10 @@ function getSessionRows_() { return getObjects_(SHEETS.SESSIONS); }
 function saveSessionRows_(rows) { writeObjects_(SHEETS.SESSIONS, rows); }
 function getDriveFileRows_() { return getObjects_(SHEETS.DRIVE_FILES); }
 function saveDriveFileRows_(rows) { writeObjects_(SHEETS.DRIVE_FILES, rows); }
+function getDriveFiles_() { return getDriveFileRows_(); }
+function saveDriveFiles_(rows) { saveDriveFileRows_(rows); }
+function getSubmissionQueueRows_() { return getObjects_(SHEETS.SUBMISSION_QUEUE); }
+function saveSubmissionQueueRows_(rows) { writeObjects_(SHEETS.SUBMISSION_QUEUE, rows); }
 
 function findUserByUsername_(username) {
   var key = normalize_(username);
@@ -769,8 +1392,7 @@ function signup_(payload) {
     userRole = 'subadmin';
     createdBy = creator.Username;
   } else if (role === 'student') {
-    userRole = 'student';
-    createdBy = 'self';
+    return response_(false, 'Student self-signup is disabled. Contact your admin for your login details.');
   } else {
     return response_(false, 'Invalid signup role.');
   }
@@ -1014,7 +1636,15 @@ function getSettings_() {
     privacyContent: toMultilineText_(map['Privacy Content']),
     cookiesContent: toMultilineText_(map['Cookies Content']),
     hasSubadminActionToken: !!trim_(map['Subadmin Action Token Hash']),
-    subadminActionTokenTtlMinutes: getSubadminTokenTtlMinutes_()
+    subadminActionTokenTtlMinutes: getSubadminTokenTtlMinutes_(),
+    requestFreshnessWindowSeconds: Math.max(60, Math.min(600, toNum_(map['Request Freshness Window Seconds'], 180))),
+    examSnapshotIntervalSeconds: Math.max(60, Math.min(900, toNum_(map['Exam Snapshot Interval Seconds'], 180))),
+    maxUploadSizeMb: Math.max(1, Math.min(100, toNum_(map['Max Upload Size MB'], 8))),
+    driveBackupCsvUploads: toBool_(map['Drive Backup CSV Uploads']),
+    driveBackupResultsExports: map['Drive Backup Results Exports'] === '' ? true : toBool_(map['Drive Backup Results Exports']),
+    bulkEmailBatchSize: Math.max(1, Math.min(50, toNum_(map['Bulk Email Batch Size'], 20))),
+    bulkEmailMaxRecipientsPerSend: Math.max(1, Math.min(500, toNum_(map['Bulk Email Max Recipients Per Send'], 150))),
+    defaultFileDownloadable: map['Default File Downloadable'] === '' ? true : toBool_(map['Default File Downloadable'])
   });
 }
 
@@ -1043,11 +1673,11 @@ function saveSettings_(payload) {
   upsertSetting_('CEO Title', trim_(payload.ceoTitle) || 'Founder & Chief Executive Officer');
   upsertSetting_('CEO Image URL', normalizeImageUrl_(payload.ceoImageUrl));
   upsertSetting_('CEO Bio', toMultilineText_(payload.ceoBio));
-  upsertSetting_('Contributors JSON', trim_(payload.contributorsJsonText) || '[]');
-  upsertSetting_('Institutions JSON', trim_(payload.institutionsJsonText) || '[]');
-  upsertSetting_('Testimonials JSON', trim_(payload.testimonialsJsonText) || '[]');
-  upsertSetting_('Tutorial Videos JSON', trim_(payload.tutorialVideosJsonText) || '[]');
-  upsertSetting_('Social Links JSON', trim_(payload.socialLinksJsonText) || '[]');
+  upsertSetting_('Contributors JSON', normalizeMediaJsonText_(payload.contributorsJsonText || '[]'));
+  upsertSetting_('Institutions JSON', normalizeMediaJsonText_(payload.institutionsJsonText || '[]'));
+  upsertSetting_('Testimonials JSON', normalizeMediaJsonText_(payload.testimonialsJsonText || '[]'));
+  upsertSetting_('Tutorial Videos JSON', normalizeMediaJsonText_(payload.tutorialVideosJsonText || '[]'));
+  upsertSetting_('Social Links JSON', normalizeMediaJsonText_(payload.socialLinksJsonText || '[]'));
   upsertSetting_('Contact Email', trim_(payload.contactEmail));
   upsertSetting_('Contact Phone', trim_(payload.contactPhone));
   upsertSetting_('Contact Address', toMultilineText_(payload.contactAddress));
@@ -1057,6 +1687,25 @@ function saveSettings_(payload) {
   if (payload.subadminActionTokenTtlMinutes !== undefined && payload.subadminActionTokenTtlMinutes !== null && payload.subadminActionTokenTtlMinutes !== '') {
     upsertSetting_('Subadmin Action Token TTL Minutes', String(Math.max(5, Math.min(1440, toNum_(payload.subadminActionTokenTtlMinutes, 60)))));
   }
+  if (payload.requestFreshnessWindowSeconds !== undefined && payload.requestFreshnessWindowSeconds !== null && payload.requestFreshnessWindowSeconds !== '') {
+    upsertSetting_('Request Freshness Window Seconds', String(Math.max(60, Math.min(600, toNum_(payload.requestFreshnessWindowSeconds, 180)))));
+  }
+  if (payload.examSnapshotIntervalSeconds !== undefined && payload.examSnapshotIntervalSeconds !== null && payload.examSnapshotIntervalSeconds !== '') {
+    upsertSetting_('Exam Snapshot Interval Seconds', String(Math.max(60, Math.min(900, toNum_(payload.examSnapshotIntervalSeconds, 180)))));
+  }
+  if (payload.maxUploadSizeMb !== undefined && payload.maxUploadSizeMb !== null && payload.maxUploadSizeMb !== '') {
+    upsertSetting_('Max Upload Size MB', String(Math.max(1, Math.min(100, toNum_(payload.maxUploadSizeMb, 8)))));
+  }
+  upsertSetting_('Drive Backup CSV Uploads', payload.driveBackupCsvUploads ? 'true' : 'false');
+  upsertSetting_('Drive Backup Results Exports', payload.driveBackupResultsExports === false ? 'false' : 'true');
+  if (payload.bulkEmailBatchSize !== undefined && payload.bulkEmailBatchSize !== null && payload.bulkEmailBatchSize !== '') {
+    upsertSetting_('Bulk Email Batch Size', String(Math.max(1, Math.min(50, toNum_(payload.bulkEmailBatchSize, 20)))));
+  }
+  if (payload.bulkEmailMaxRecipientsPerSend !== undefined && payload.bulkEmailMaxRecipientsPerSend !== null && payload.bulkEmailMaxRecipientsPerSend !== '') {
+    upsertSetting_('Bulk Email Max Recipients Per Send', String(Math.max(1, Math.min(500, toNum_(payload.bulkEmailMaxRecipientsPerSend, 150)))));
+  }
+  upsertSetting_('Default File Downloadable', payload.defaultFileDownloadable === false ? 'false' : 'true');
+  upsertSetting_('Public Site Content Version', new Date().toISOString());
   return getSettings_();
 }
 
@@ -1071,7 +1720,7 @@ function examPublicShape_(exam) {
     shuffleQuestions: toBool_(exam.ShuffleQuestions),
     passMark: toNum_(exam.PassMark, 50),
     resultMessage: exam.ResultMessage || '',
-    captureSnapshots: toBool_(exam.CaptureSnapshots === '' ? true : exam.CaptureSnapshots),
+    captureSnapshots: toBool_(exam.CaptureSnapshots),
     recordAudio: toBool_(exam.RecordAudio),
     recordVideo: toBool_(exam.RecordVideo),
     recordScreen: toBool_(exam.RecordScreen),
@@ -1100,7 +1749,7 @@ function createExam_(payload) {
     ShuffleQuestions: toBool_(payload.shuffleQuestions),
     PassMark: Math.max(0, Math.min(100, toNum_(payload.passMark, 50))),
     ResultMessage: trim_(payload.resultMessage),
-    CaptureSnapshots: payload.captureSnapshots === undefined ? true : toBool_(payload.captureSnapshots),
+    CaptureSnapshots: payload.captureSnapshots === undefined ? false : toBool_(payload.captureSnapshots),
     RecordAudio: toBool_(payload.recordAudio),
     RecordVideo: toBool_(payload.recordVideo),
     RecordScreen: toBool_(payload.recordScreen),
@@ -1137,7 +1786,7 @@ function setExamOptions_(payload) {
       exams[i].ShuffleQuestions = toBool_(payload.shuffleQuestions);
       exams[i].PassMark = Math.max(0, Math.min(100, toNum_(payload.passMark, 50)));
       exams[i].ResultMessage = trim_(payload.resultMessage);
-      exams[i].CaptureSnapshots = payload.captureSnapshots === undefined ? toBool_(exams[i].CaptureSnapshots === '' ? true : exams[i].CaptureSnapshots) : toBool_(payload.captureSnapshots);
+      exams[i].CaptureSnapshots = payload.captureSnapshots === undefined ? toBool_(exams[i].CaptureSnapshots) : toBool_(payload.captureSnapshots);
       exams[i].RecordAudio = toBool_(payload.recordAudio);
       exams[i].RecordVideo = toBool_(payload.recordVideo);
       exams[i].RecordScreen = toBool_(payload.recordScreen);
@@ -1364,7 +2013,7 @@ function addCandidate_(payload) {
   var actor = requireAdminAction_(payload, true).user;
   var fullName = trim_(payload.fullName);
   var regId = trim_(payload.regId);
-  var passportUrl = normalizeImageUrl_(payload.passportUrl);
+  var passportUrl = persistStudentPassportIfPossible_(payload.passportUrl || payload.imageUrl, regId);
   if (!fullName || !regId) return response_(false, 'Full name and Registration ID are required.');
   var rows = getCandidates_();
   for (var i = 0; i < rows.length; i++) {
@@ -1391,7 +2040,7 @@ function importCandidates_(payload) {
   for (var i = 0; i < rows.length; i++) {
     var fullName = trim_(rows[i].fullName || rows[i].FullName);
     var regId = trim_(rows[i].regId || rows[i].RegId);
-    var passportUrl = normalizeImageUrl_(rows[i].passportUrl || rows[i].PassportUrl);
+    var passportUrl = persistStudentPassportIfPossible_(rows[i].passportUrl || rows[i].PassportUrl || rows[i].imageUrl || rows[i].ImageUrl, regId);
     if (!fullName || !regId || existing[normalize_(regId)]) { skipped++; continue; }
     list.push({ FullName: fullName, RegId: regId, CreatedAt: nowIso_(), UpdatedAt: nowIso_(), PassportUrl: passportUrl });
     ensureStudentShadowUser_(users, fullName, regId, actor.Username);
@@ -1484,7 +2133,7 @@ function generateStudentAccounts_(payload) {
   var filename = 'student_accounts_passwords_' + Utilities.formatDate(new Date(), TZ, 'yyyyMMdd_HHmmss') + '.csv';
   var driveNotice = '';
   try {
-    saveTextBackupFile_('Generated Student Passwords', filename, csv, { kind: 'student_password_csv', createdBy: actor.Username });
+    if (toBool_(getSettingsMap_()['Drive Backup CSV Uploads'])) saveTextBackupFile_('Generated Student Passwords', filename, csv, { kind: 'student_password_csv', createdBy: actor.Username });
   } catch (err) {
     driveNotice = ' Student accounts were generated, but the Drive backup could not be saved yet. Reauthorize the Apps Script deployment with Drive permission and try again.';
   }
@@ -1511,9 +2160,129 @@ function listAdmins_(payload) {
 
 function listStudents_(payload) {
   requireSession_(payload.token, ['admin']);
-  var data = getUsers_().filter(function(u){ return u.Role === 'student'; }).map(userPublicShape_);
+  var passportMap = {};
+  getCandidates_().forEach(function(item){
+    passportMap[normalize_(item.RegId)] = normalizeImageUrl_(item.PassportUrl || '');
+  });
+  var data = getUsers_().filter(function(u){ return u.Role === 'student'; }).map(function(u){
+    var item = userPublicShape_(u);
+    item.passportUrl = passportMap[normalize_(u.RegId)] || '';
+    return item;
+  });
   sortByFullName_(data);
   return response_(true, 'Students loaded.', data);
+}
+
+
+
+function updateStudentDetails_(payload) {
+  var actor = requireAdminAction_(payload, true).user;
+  var originalUsername = trim_(payload.originalUsername || payload.username);
+  var nextFullName = trim_(payload.fullName);
+  var nextUsername = trim_(payload.newUsername || payload.username || payload.nextUsername);
+  var nextRegId = trim_(payload.regId);
+  var nextPassportUrl = persistStudentPassportIfPossible_(payload.passportUrl || payload.imageUrl, nextRegId);
+
+  if (!originalUsername) return response_(false, 'Student username is required.');
+  if (!nextFullName || !nextUsername || !nextRegId) return response_(false, 'Full name, username, and Registration ID are required.');
+
+  var users = getUsers_();
+  var targetIndex = -1;
+  for (var i = 0; i < users.length; i++) {
+    if (normalize_(users[i].Username) === normalize_(originalUsername)) { targetIndex = i; break; }
+  }
+  if (targetIndex < 0) return response_(false, 'Student user not found.');
+
+  var target = users[targetIndex];
+  if (target.Role !== 'student') return response_(false, 'Only student accounts can be edited here.');
+  if (!roleCanManageUser_(actor.Role, target.Role)) return response_(false, 'You do not have permission to edit this student.');
+
+  for (var u = 0; u < users.length; u++) {
+    if (u === targetIndex) continue;
+    if (normalize_(users[u].Username) === normalize_(nextUsername)) return response_(false, 'That username is already in use.');
+    if (users[u].Role === 'student' && normalize_(users[u].RegId || '') === normalize_(nextRegId)) return response_(false, 'That Registration ID is already assigned to another student.');
+  }
+
+  var candidates = getCandidates_();
+  var candidateIndex = -1;
+  var duplicateCandidateIndex = -1;
+  var oldRegId = trim_(target.RegId);
+  for (var c = 0; c < candidates.length; c++) {
+    if (candidateIndex < 0 && oldRegId && normalize_(candidates[c].RegId) === normalize_(oldRegId)) candidateIndex = c;
+    if (normalize_(candidates[c].RegId) === normalize_(nextRegId)) duplicateCandidateIndex = c;
+  }
+  if (candidateIndex < 0 && duplicateCandidateIndex >= 0) candidateIndex = duplicateCandidateIndex;
+  if (duplicateCandidateIndex >= 0 && duplicateCandidateIndex !== candidateIndex) return response_(false, 'That Registration ID already exists in the candidate list.');
+
+  var oldUsername = trim_(target.Username);
+  target.FullName = nextFullName;
+  target.Username = nextUsername;
+  target.RegId = nextRegId;
+
+  if (candidateIndex >= 0) {
+    candidates[candidateIndex].FullName = nextFullName;
+    candidates[candidateIndex].RegId = nextRegId;
+    candidates[candidateIndex].PassportUrl = nextPassportUrl;
+    candidates[candidateIndex].UpdatedAt = nowIso_();
+  } else {
+    candidates.push({ FullName: nextFullName, RegId: nextRegId, CreatedAt: nowIso_(), UpdatedAt: nowIso_(), PassportUrl: nextPassportUrl });
+  }
+
+  var results = getResults_();
+  var resultsChanged = false;
+  for (var r = 0; r < results.length; r++) {
+    var resultMatch = (oldUsername && normalize_(results[r].Username || '') === normalize_(oldUsername)) || (oldRegId && normalize_(results[r].RegId || '') === normalize_(oldRegId));
+    if (!resultMatch) continue;
+    results[r].FullName = nextFullName;
+    results[r].Username = nextUsername;
+    results[r].RegId = nextRegId;
+    resultsChanged = true;
+  }
+
+  var progressRows = getProgressRows_();
+  var progressChanged = false;
+  for (var p = 0; p < progressRows.length; p++) {
+    if (!(oldRegId && normalize_(progressRows[p].RegId || '') === normalize_(oldRegId))) continue;
+    progressRows[p].FullName = nextFullName;
+    progressRows[p].RegId = nextRegId;
+    progressChanged = true;
+  }
+
+  var permissionRows = getPermissionCodes_();
+  var permissionChanged = false;
+  for (var pr = 0; pr < permissionRows.length; pr++) {
+    var permMatch = (oldUsername && normalize_(permissionRows[pr].Username || '') === normalize_(oldUsername)) || (oldRegId && normalize_(permissionRows[pr].RegId || '') === normalize_(oldRegId));
+    if (!permMatch) continue;
+    permissionRows[pr].Username = nextUsername;
+    permissionRows[pr].RegId = nextRegId;
+    permissionChanged = true;
+  }
+
+  var driveRows = getDriveFileRows_();
+  var driveChanged = false;
+  for (var d = 0; d < driveRows.length; d++) {
+    var driveMatch = (oldUsername && normalize_(driveRows[d].Username || '') === normalize_(oldUsername)) || (oldRegId && normalize_(driveRows[d].RegId || '') === normalize_(oldRegId));
+    if (!driveMatch) continue;
+    driveRows[d].Username = nextUsername;
+    driveRows[d].RegId = nextRegId;
+    driveChanged = true;
+  }
+
+  saveUsers_(users);
+  saveCandidates_(candidates);
+  if (resultsChanged) saveResults_(results);
+  if (progressChanged) saveProgressRows_(progressRows);
+  if (permissionChanged) savePermissionCodes_(permissionRows);
+  if (driveChanged) saveDriveFileRows_(driveRows);
+
+  if (normalize_(oldUsername) !== normalize_(nextUsername)) deactivateSessionsForUsername_(oldUsername);
+
+  return response_(true, 'Student details updated successfully.', {
+    fullName: nextFullName,
+    username: nextUsername,
+    regId: nextRegId,
+    passportUrl: nextPassportUrl
+  });
 }
 
 function setUserActive_(payload) {
@@ -1962,29 +2731,15 @@ function autosaveProgress_(payload) {
   var examCode = trim_(payload.examCode);
   var regId = trim_(payload.regId);
   if (!examCode || !regId) return response_(false, 'Exam code and Reg ID are required.');
-  var rows = getProgressRows_();
-  var found = false;
-  for (var i = 0; i < rows.length; i++) {
-    if (normalize_(rows[i].ExamCode) === normalize_(examCode) && normalize_(rows[i].RegId) === normalize_(regId)) {
-      rows[i].FullName = trim_(payload.fullName);
-      rows[i].RemainingSeconds = toNum_(payload.remainingSeconds, 0);
-      rows[i].AnswersJson = JSON.stringify(Array.isArray(payload.answers) ? payload.answers : []);
-      rows[i].UpdatedAt = nowIso_();
-      found = true;
-      break;
-    }
-  }
-  if (!found) {
-    rows.push({
-      ExamCode: examCode,
-      RegId: regId,
-      FullName: trim_(payload.fullName),
-      RemainingSeconds: toNum_(payload.remainingSeconds, 0),
-      AnswersJson: JSON.stringify(Array.isArray(payload.answers) ? payload.answers : []),
-      UpdatedAt: nowIso_()
-    });
-  }
-  saveProgressRows_(rows);
+  var row = {
+    ExamCode: examCode,
+    RegId: regId,
+    FullName: trim_(payload.fullName),
+    RemainingSeconds: toNum_(payload.remainingSeconds, 0),
+    AnswersJson: JSON.stringify(Array.isArray(payload.answers) ? payload.answers : []),
+    UpdatedAt: nowIso_()
+  };
+  upsertObjectByKeys_(SHEETS.PROGRESS, ['ExamCode', 'RegId'], row);
   return response_(true, 'Progress saved.', { saved: true });
 }
 
@@ -2012,18 +2767,28 @@ function submitExam_(payload) {
   var exam = findExam_(examCode);
   if (!exam || toBool_(exam.IsDeleted)) return response_(false, 'Exam not found.');
   var user = findUserByUsername_(auth.user.Username);
-  var prior = getResults_().filter(function(r){ return normalize_(r.ExamCode) === normalize_(examCode) && normalize_(r.RegId) === normalize_(regId) && !toBool_(r.IsDeleted); });
+  var existingResults = getResults_();
+  var prior = existingResults.filter(function(r){
+    return normalize_(r.ExamCode) === normalize_(examCode) &&
+      normalize_(r.RegId) === normalize_(regId) &&
+      !toBool_(r.IsDeleted);
+  });
   var permissionRow = null;
   if (prior.length) {
     permissionRow = canUsePermissionCode_(examCode, regId, user.Username, permissionCode);
     if (!permissionRow) return response_(false, 'You have already taken this exam.');
   }
 
-  var questions = getQuestions_().filter(function(q){ return normalize_(q.ExamCode) === normalize_(examCode) && !toBool_(q.IsDeleted); });
+  var questions = getQuestions_().filter(function(q){
+    return normalize_(q.ExamCode) === normalize_(examCode) && !toBool_(q.IsDeleted);
+  });
   if (!questions.length) return response_(false, 'No active questions found for this exam.');
 
   var answerMap = {};
-  (Array.isArray(payload.answers) ? payload.answers : []).forEach(function(a){ answerMap[String(a.questionId)] = trim_(a.selected).toUpperCase(); });
+  var submittedAnswers = Array.isArray(payload.answers) ? payload.answers : [];
+  submittedAnswers.forEach(function(a){
+    answerMap[String(a.questionId)] = trim_(a.selected).toUpperCase();
+  });
 
   var score = 0;
   var passedNos = [];
@@ -2034,7 +2799,12 @@ function submitExam_(payload) {
     var selected = answerMap[String(q.Id)] || '';
     var correct = trim_(q.Answer).toUpperCase();
     var passed = selected && selected === correct;
-    if (passed) { score++; passedNos.push(String(i + 1)); } else { failedNos.push(String(i + 1)); }
+    if (passed) {
+      score++;
+      passedNos.push(String(i + 1));
+    } else {
+      failedNos.push(String(i + 1));
+    }
     review.push({
       qNo: i + 1,
       status: passed ? 'PASS' : 'FAIL',
@@ -2058,8 +2828,7 @@ function submitExam_(payload) {
   var createdAt = nowIso_();
   var createdId = Utilities.getUuid();
 
-  var results = getResults_();
-  results.push({
+  var resultRow = {
     Id: createdId,
     Timestamp: createdAt,
     ExamCode: examCode,
@@ -2077,7 +2846,7 @@ function submitExam_(payload) {
     Ranking: '',
     PassedNos: passedNos.join(', ') || 'None',
     FailedNos: failedNos.join(', ') || 'None',
-    AnswersJson: JSON.stringify(Array.isArray(payload.answers) ? payload.answers : []),
+    AnswersJson: JSON.stringify(submittedAnswers),
     ReviewJson: JSON.stringify(review),
     StatusMessage: statusMessage,
     IsPublished: true,
@@ -2088,9 +2857,38 @@ function submitExam_(payload) {
     DeletedBy: '',
     RestoredAt: '',
     RestoredBy: ''
+  };
+
+  var rankingMap = computeRankingMapForResults_(existingResults.concat([resultRow]));
+  resultRow.Ranking = rankingMap[createdId] || '';
+
+  appendSubmissionQueue_({
+    Id: Utilities.getUuid(),
+    Timestamp: createdAt,
+    ExamCode: examCode,
+    RegId: regId,
+    FullName: fullName,
+    Username: user.Username,
+    AttemptNo: attemptNo,
+    AnswersJson: JSON.stringify(submittedAnswers),
+    SummaryJson: JSON.stringify({
+      score: score,
+      total: total,
+      percentage: percentage,
+      passMark: passMark,
+      passStatus: passStatus,
+      ranking: resultRow.Ranking,
+      passedNos: resultRow.PassedNos,
+      failedNos: resultRow.FailedNos,
+      statusMessage: statusMessage
+    }),
+    Status: 'PROCESSED',
+    ProcessedAt: createdAt,
+    ResultId: createdId,
+    PermissionCode: permissionCode || ''
   });
-  assignRankingsForExam_(results, examCode);
-  saveResults_(results);
+
+  appendObject_(SHEETS.RESULTS, resultRow);
 
   if (permissionRow) {
     var perms = getPermissionRows_();
@@ -2098,14 +2896,20 @@ function submitExam_(payload) {
       if (normalize_(p.PermissionCode) === normalize_(permissionRow.PermissionCode)) {
         p.Status = 'USED';
         p.UsedAt = nowIso_();
+        updateObjectRow_(SHEETS.PERMISSION_CODES, p._row, p);
       }
     });
-    savePermissionRows_(perms);
   }
 
-  saveProgressRows_(getProgressRows_().filter(function(p){ return !(normalize_(p.ExamCode) === normalize_(examCode) && normalize_(p.RegId) === normalize_(regId)); }));
+  var progressRows = getProgressRows_();
+  for (var pr = 0; pr < progressRows.length; pr++) {
+    if (normalize_(progressRows[pr].ExamCode) === normalize_(examCode) &&
+        normalize_(progressRows[pr].RegId) === normalize_(regId)) {
+      clearSheetRow_(SHEETS.PROGRESS, progressRows[pr]._row);
+      break;
+    }
+  }
 
-  var latest = getResults_().filter(function(r){ return String(r.Id) === String(createdId); })[0] || null;
   var candidateInfo = findCandidateByRegId_(regId) || {};
   var branding = getResultBranding_();
 
@@ -2115,7 +2919,7 @@ function submitExam_(payload) {
     score: score,
     total: total,
     percentage: percentage,
-    ranking: latest ? latest.Ranking : '',
+    ranking: resultRow.Ranking,
     passedNos: passedNos.join(', ') || 'None',
     failedNos: failedNos.join(', ') || 'None',
     passStatus: passStatus,
@@ -2155,11 +2959,13 @@ function listResultsByExam_(payload) {
   requireSession_(payload.token, ['admin']);
   var examCode = trim_(payload.examCode);
   var includeDeleted = toBool_(payload.includeDeleted);
-  var rows = getResults_().filter(function(r){
+  var rawRows = getResults_().filter(function(r){
     if (examCode && normalize_(r.ExamCode) !== normalize_(examCode)) return false;
     if (!includeDeleted && toBool_(r.IsDeleted)) return false;
     return true;
-  }).map(function(r){
+  });
+  var rankingMap = computeRankingMapForResults_(rawRows);
+  var rows = rawRows.map(function(r){
     return {
       id: r.Id || '',
       timestamp: r.Timestamp,
@@ -2173,7 +2979,7 @@ function listResultsByExam_(payload) {
       percentage: r.Percentage,
       passMark: r.PassMark,
       passStatus: r.PassStatus,
-      ranking: r.Ranking || '',
+      ranking: rankingMap[String(r.Id || '')] || r.Ranking || '',
       statusMessage: r.StatusMessage || '',
       isPublished: toBool_(r.IsPublished),
       isDeleted: toBool_(r.IsDeleted)
@@ -2318,7 +3124,7 @@ function listVideosByExam_(payload) {
   var limit = Math.max(1, Math.min(500, toNum_(payload.limit, 200)));
   var rows = getDriveFileRows_().filter(function(row){
     var kind = trim_(row.Kind).toLowerCase();
-    if (kind !== 'video' && kind !== 'screen') return false;
+    if (kind !== 'video') return false;
     if (examCode && normalize_(row.ExamCode) !== examCode) return false;
     if (regId && normalize_(row.RegId) !== regId) return false;
     if (!includeDeleted && toBool_(row.IsDeleted)) return false;
@@ -2330,18 +3136,42 @@ function listVideosByExam_(payload) {
 }
 
 
+function listScreensByExam_(payload) {
+  requireSession_(payload.token, ['admin']);
+  var examCode = normalize_(payload.examCode);
+  var regId = normalize_(payload.regId);
+  var includeDeleted = toBool_(payload.includeDeleted);
+  var limit = Math.max(1, Math.min(500, toNum_(payload.limit, 200)));
+  var rows = getDriveFileRows_().filter(function(row){
+    var kind = trim_(row.Kind).toLowerCase();
+    if (kind !== 'screen') return false;
+    if (examCode && normalize_(row.ExamCode) !== examCode) return false;
+    if (regId && normalize_(row.RegId) !== regId) return false;
+    if (!includeDeleted && toBool_(row.IsDeleted)) return false;
+    return true;
+  }).map(driveFilePublicShape_);
+  rows.sort(function(a, b){ return String(b.createdAt).localeCompare(String(a.createdAt)); });
+  if (rows.length > limit) rows = rows.slice(0, limit);
+  return response_(true, 'Screen recordings loaded.', rows);
+}
+
+
 function getProctoringFolderPathParts_(kind, examCode, regId) {
   var rootMap = {
     snapshot: 'Proctoring Snapshots',
     audio: 'Proctoring Audio',
     video: 'Proctoring Video',
-    screen: 'Proctoring Screen'
+    screen: 'Proctoring Screen Recordings'
   };
   var root = rootMap[kind] || 'Proctoring Snapshots';
   var parts = [root];
   if (trim_(examCode)) parts.push(safeName_(examCode));
   if (trim_(regId)) parts.push(safeName_(regId));
   return parts;
+}
+
+function ensureLegacyScreenFolderAlias_(examCode, regId) {
+  getNestedFolder_(['Proctoring Screen', safeName_(examCode), safeName_(regId)]);
 }
 
 function getFolderChildrenForView_(folder, limit) {
@@ -2375,7 +3205,7 @@ function getFolderChildrenForView_(folder, limit) {
 
 function getProctoringFolderView_(payload) {
   requireSession_(payload.token, ['admin']);
-  var kind = normalize_(payload.kind) || 'snapshot';
+  var kind = normalizeKindKey_(payload.kind) || 'snapshot';
   var examCode = trim_(payload.examCode);
   var regId = trim_(payload.regId);
   var includeDeleted = toBool_(payload.includeDeleted);
@@ -2412,8 +3242,30 @@ function getProctoringFolderView_(payload) {
   });
 }
 
+
+function ensureProctoringFolders_(payload) {
+  requireSession_(payload.token, ['student', 'admin']);
+  var examCode = trim_(payload.examCode);
+  var regId = trim_(payload.regId);
+  if (!examCode || !regId) return response_(false, 'Exam code and Reg ID are required.');
+  var requestedKinds = [];
+  if (toBool_(payload.captureSnapshots) || toBool_(payload.snapshot)) requestedKinds.push('snapshot');
+  if (toBool_(payload.recordAudio) || toBool_(payload.audio)) requestedKinds.push('audio');
+  if (toBool_(payload.recordVideo) || toBool_(payload.video)) requestedKinds.push('video');
+  if (toBool_(payload.recordScreen) || toBool_(payload.screen)) requestedKinds.push('screen');
+  if (!requestedKinds.length) requestedKinds = ['snapshot', 'audio', 'video', 'screen'];
+  var created = [];
+  requestedKinds.forEach(function(kind){
+    var folder = getNestedFolder_(getProctoringFolderPathParts_(kind, examCode, regId));
+    if (kind === 'screen') ensureLegacyScreenFolderAlias_(examCode, regId);
+    created.push({ kind: kind, folderId: folder.getId(), folderUrl: folder.getUrl(), name: folder.getName() });
+  });
+  return response_(true, 'Proctoring folders are ready.', { examCode: examCode, regId: regId, folders: created });
+}
+
 function updateDriveRowsByIds_(payload, successMessage, updater, hardDelete) {
-  requireAdminAction_(payload, true);
+  var auth = requireAdminAction_(payload, true);
+  var actor = auth && auth.user ? auth.user : null;
   var ids = normalizeIdList_(payload.fileIds || [payload.fileId]);
   if (!ids.length) return response_(false, 'No file selected.');
   var idMap = {};
@@ -2427,7 +3279,8 @@ function updateDriveRowsByIds_(payload, successMessage, updater, hardDelete) {
       try { if (trim_(r.DriveFileId)) DriveApp.getFileById(trim_(r.DriveFileId)).setTrashed(true); } catch (err) {}
       r._remove = true;
     } else {
-      updater(r);
+      var result = updater ? updater(r, actor) : true;
+      if (result === false) return;
       changed++;
     }
   });
@@ -2494,7 +3347,7 @@ function exportResultsByExam_(payload) {
   });
   var csv = csvRows.map(function(r){ return r.map(csvEscape_).join(','); }).join('\n');
   var filename = 'results_' + safeName_(examCode || 'exam') + '.csv';
-  saveTextBackupFile_('Results Exports', filename, csv, { kind: 'results_export', examCode: examCode });
+  if (toBool_(getSettingsMap_()['Drive Backup Results Exports'] === '' ? true : getSettingsMap_()['Drive Backup Results Exports'])) saveTextBackupFile_('Results Exports', filename, csv, { kind: 'results_export', examCode: examCode });
   return response_(true, 'Results export prepared successfully.', { csv: csv, filename: filename });
 }
 
@@ -2532,7 +3385,7 @@ function buildPublicResultResponse_(result, exam, candidateInfo, branding) {
     total: toNum_(result.Total, 0),
     percentage: toNum_(result.Percentage, 0),
     passMark: toNum_(result.PassMark, 50),
-    ranking: result.Ranking || '—',
+    ranking: result._computedRanking || result.Ranking || '—',
     passedNos: result.PassedNos || 'None',
     failedNos: result.FailedNos || 'None',
     passedStatus: result.PassStatus || '',
@@ -2622,6 +3475,7 @@ function checkResultPublic_(payload) {
 
   var result = eligible[0];
   var exam = findExam_(result.ExamCode);
+  result._computedRanking = (computeRankingMapForResults_(getResults_()) || {})[String(result.Id || '')] || result.Ranking || '';
   var candidateInfo = findCandidateByRegId_(result.RegId) || {};
   var branding = getResultBranding_();
 
@@ -2648,6 +3502,7 @@ function checkResultPublicById_(payload) {
   if (!result) return response_(false, 'The selected published result could not be found.');
 
   var exam = findExam_(result.ExamCode);
+  result._computedRanking = (computeRankingMapForResults_(getResults_()) || {})[String(result.Id || '')] || result.Ranking || '';
   var candidateInfo = findCandidateByRegId_(result.RegId) || {};
   var branding = getResultBranding_();
   return response_(true, 'Result loaded successfully.', buildPublicResultResponse_(result, exam, candidateInfo, branding));
@@ -2681,9 +3536,16 @@ function getNestedFolder_(names) {
   return folder;
 }
 
+function getSubFolder_(name) {
+  return getNestedFolder_([name]);
+}
+
+function normalizeKindKey_(value) {
+  return trim_(value).toLowerCase();
+}
+
 function logDriveFile_(kind, originalName, file, examCode, regId, username, meta) {
-  var rows = getDriveFileRows_();
-  rows.push({
+  appendObject_(SHEETS.DRIVE_FILES, {
     Id: Utilities.getUuid(),
     Kind: kind,
     OriginalName: originalName,
@@ -2700,7 +3562,6 @@ function logDriveFile_(kind, originalName, file, examCode, regId, username, meta
     RestoredAt: '',
     RestoredBy: ''
   });
-  saveDriveFileRows_(rows);
 }
 
 function saveTextBackupFile_(subFolder, filename, content, meta) {
@@ -2714,7 +3575,11 @@ function saveTextBackupFile_(subFolder, filename, content, meta) {
 function persistQuestionImageIfPossible_(imageUrl, examCode) {
   imageUrl = normalizeImageUrl_(imageUrl);
   if (!imageUrl) return { imageUrl: '', driveFileId: '', sourceUrl: '' };
-  if (/drive\.google\.com\/uc\?export=view&id=/i.test(imageUrl)) return { imageUrl: imageUrl, driveFileId: '', sourceUrl: imageUrl };
+  var existingDriveId = extractDriveFileId_(imageUrl);
+  if (existingDriveId) {
+    var existingDriveLinks = buildDriveImageUrls_(existingDriveId);
+    return { imageUrl: existingDriveLinks.thumbnailUrl || existingDriveLinks.viewUrl || imageUrl, driveFileId: existingDriveId, sourceUrl: imageUrl };
+  }
   try {
     var response = UrlFetchApp.fetch(imageUrl, { muteHttpExceptions: true, followRedirects: true, headers: { 'User-Agent': 'Mozilla/5.0' } });
     var code = response.getResponseCode();
@@ -2739,6 +3604,7 @@ function persistQuestionImageIfPossible_(imageUrl, examCode) {
 }
 
 function uploadSnapshot_(payload) {
+  assertUploadWithinLimit_(payload.imageData, 0);
   var auth = requireSession_(payload.token, ['student']);
   var examCode = trim_(payload.examCode);
   var regId = trim_(payload.regId);
@@ -2757,6 +3623,7 @@ function uploadSnapshot_(payload) {
 }
 
 function uploadAudioClip_(payload) {
+  assertUploadWithinLimit_(payload.audioData, 0);
   var auth = requireSession_(payload.token, ['student']);
   var examCode = trim_(payload.examCode);
   var regId = trim_(payload.regId);
@@ -2780,6 +3647,7 @@ function uploadAudioClip_(payload) {
 }
 
 function uploadVideoClip_(payload) {
+  assertUploadWithinLimit_(payload.videoData, 0);
   var auth = requireSession_(payload.token, ['student']);
   var examCode = trim_(payload.examCode);
   var regId = trim_(payload.regId);
@@ -2797,11 +3665,12 @@ function uploadVideoClip_(payload) {
   var filename = safeName_(regId) + '_' + Utilities.formatDate(new Date(), TZ, 'yyyyMMdd_HHmmss') + (segmentLabel ? '_' + safeName_(segmentLabel) : '') + '.' + ext;
   var file = folder.createFile(Utilities.newBlob(bytes, mimeType, filename));
   try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (err) {}
-  logDriveFile_('video', filename, file, examCode, regId, auth.user.Username, { fullName: fullName, mimeType: mimeType, durationSeconds: durationSeconds, segmentLabel: segmentLabel, viewUrl: 'https://drive.google.com/file/d/' + file.getId() + '/preview' });
-  return response_(true, 'Video clip uploaded successfully.', { fileId: file.getId(), url: file.getUrl() });
+  logDriveFile_('video', filename, file, examCode, regId, auth.user.Username, { fullName: fullName, mimeType: mimeType, durationSeconds: durationSeconds, segmentLabel: segmentLabel, mediaLabel: 'Audio-Video', hasAudio: true, viewUrl: 'https://drive.google.com/file/d/' + file.getId() + '/preview' });
+  return response_(true, 'Audio-video clip uploaded successfully.', { fileId: file.getId(), url: file.getUrl() });
 }
 
 function uploadScreenClip_(payload) {
+  assertUploadWithinLimit_(payload.videoData, 0);
   var auth = requireSession_(payload.token, ['student']);
   var examCode = trim_(payload.examCode);
   var regId = trim_(payload.regId);
@@ -2811,7 +3680,8 @@ function uploadScreenClip_(payload) {
   var segmentLabel = trim_(payload.segmentLabel) || '';
   var durationSeconds = toNum_(payload.durationSeconds, 0);
   if (!examCode || !regId || !videoData) return response_(false, 'Exam code, Reg ID, and screen data are required.');
-  var folder = getNestedFolder_(['Proctoring Screen', safeName_(examCode), safeName_(regId)]);
+  ensureLegacyScreenFolderAlias_(examCode, regId);
+  var folder = getNestedFolder_(getProctoringFolderPathParts_('screen', examCode, regId));
   var bytes = Utilities.base64Decode(videoData);
   var ext = 'webm';
   if (/mp4/i.test(mimeType)) ext = 'mp4';
@@ -2821,4 +3691,248 @@ function uploadScreenClip_(payload) {
   try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (err) {}
   logDriveFile_('screen', filename, file, examCode, regId, auth.user.Username, { fullName: fullName, mimeType: mimeType, durationSeconds: durationSeconds, segmentLabel: segmentLabel, mediaLabel: 'Screen', viewUrl: 'https://drive.google.com/file/d/' + file.getId() + '/preview' });
   return response_(true, 'Screen recording uploaded successfully.', { fileId: file.getId(), url: file.getUrl() });
+}
+
+
+function getMaxUploadBytes_() {
+  return Math.max(1, Math.min(100, toNum_(getSettingsMap_()['Max Upload Size MB'], 8))) * 1024 * 1024;
+}
+
+function assertUploadWithinLimit_(base64Payload, fallbackBytes) {
+  var bytes = base64Payload ? Math.ceil(String(base64Payload).length * 3 / 4) : Math.max(0, toNum_(fallbackBytes, 0));
+  if (bytes > getMaxUploadBytes_()) {
+    throw new Error('Upload exceeds the current size limit of ' + Math.round(getMaxUploadBytes_() / 1024 / 1024) + ' MB.');
+  }
+}
+
+function sanitizeHtmlEmail_(value) {
+  var html = String(value == null ? '' : value);
+  html = html.replace(/<script[\s\S]*?<\/script>/gi, '');
+  html = html.replace(/\son\w+="[^"]*"/gi, '');
+  html = html.replace(/\son\w+='[^']*'/gi, '');
+  return html;
+}
+
+function parseEmailList_(raw) {
+  var text = String(raw == null ? '' : raw);
+  var parts = text.split(/[\n,;\s]+/);
+  var seen = {};
+  var out = [];
+  for (var i = 0; i < parts.length; i++) {
+    var email = trim_(parts[i]).toLowerCase();
+    if (!email) continue;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) continue;
+    if (seen[email]) continue;
+    seen[email] = true;
+    out.push(email);
+  }
+  return out;
+}
+
+function sendBulkEmail_(payload) {
+  var actor = requireSession_(payload.token, ['principal_admin']).user;
+  var subject = trim_(payload.subject);
+  var body = trim_(payload.body);
+  var htmlBody = sanitizeHtmlEmail_(payload.htmlBody || body.replace(/\n/g, '<br>'));
+  if (!subject || !body) return response_(false, 'Email subject and message are required.');
+  var recipients = parseEmailList_(payload.manualEmails);
+  if (trim_(payload.csvText)) {
+    var csvRecipients = parseEmailList_(String(payload.csvText).replace(/,/g, '\n'));
+    recipients = recipients.concat(csvRecipients).filter(function(v, i, arr){ return arr.indexOf(v) === i; });
+  }
+  var maxRecipients = Math.max(1, Math.min(500, toNum_(getSettingsMap_()['Bulk Email Max Recipients Per Send'], 150)));
+  if (!recipients.length) return response_(false, 'Add at least one valid email address or upload a CSV file.');
+  if (recipients.length > maxRecipients) return response_(false, 'Reduce recipients to ' + maxRecipients + ' or fewer for one send.');
+  var batchSize = Math.max(1, Math.min(50, toNum_(getSettingsMap_()['Bulk Email Batch Size'], 20)));
+  var fromName = trim_(getSettingsMap_()['Result Brand Name']) || 'Genz CBT Pro';
+  var sent = 0;
+  for (var i = 0; i < recipients.length; i += batchSize) {
+    var chunk = recipients.slice(i, i + batchSize);
+    MailApp.sendEmail({
+      bcc: chunk.join(','),
+      subject: subject,
+      body: body,
+      htmlBody: htmlBody,
+      name: fromName,
+      noReply: true
+    });
+    sent += chunk.length;
+  }
+  return response_(true, 'Bulk email sent successfully.', { sentCount: sent, subject: subject, requestedBy: actor.Username });
+}
+
+function managedFilePublicShape_(row) {
+  var meta = {};
+  try { meta = row.MetaJson ? JSON.parse(row.MetaJson) : {}; } catch (err) {}
+  var fileId = trim_(row.DriveFileId);
+  var previewUrl = fileId ? ('https://drive.google.com/file/d/' + fileId + '/preview') : trim_(row.DriveUrl);
+  var viewUrl = fileId ? ('https://drive.google.com/uc?export=view&id=' + fileId) : trim_(row.DriveUrl);
+  var downloadUrl = fileId ? ('https://drive.google.com/uc?export=download&id=' + fileId) : trim_(row.DriveUrl);
+  return {
+    id: row.Id,
+    kind: row.Kind || 'managed_file',
+    originalName: row.OriginalName || '',
+    driveFileId: fileId,
+    driveUrl: trim_(row.DriveUrl),
+    previewUrl: previewUrl,
+    viewUrl: viewUrl,
+    downloadUrl: downloadUrl,
+    examCode: row.ExamCode || '',
+    regId: row.RegId || '',
+    username: row.Username || '',
+    meta: meta,
+    isDeleted: toBool_(row.IsDeleted),
+    createdAt: row.CreatedAt || '',
+    deletedAt: row.DeletedAt || '',
+    deletedBy: row.DeletedBy || ''
+  };
+}
+
+function uploadManagedFile_(payload) {
+  var actor = requireSession_(payload.token, ['principal_admin']).user;
+  var fileName = trim_(payload.fileName || payload.originalName);
+  var mimeType = trim_(payload.mimeType) || 'application/octet-stream';
+  var base64Data = trim_(payload.fileData || payload.base64Data);
+  if (!fileName || !base64Data) return response_(false, 'File name and file data are required.');
+  assertUploadWithinLimit_(base64Data, 0);
+  var folder = getSubFolder_('Managed Uploads');
+  var blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, fileName);
+  var file = folder.createFile(blob);
+  try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (err) {}
+  var downloadable = payload.downloadable === undefined ? (getSettingsMap_()['Default File Downloadable'] === '' ? true : toBool_(getSettingsMap_()['Default File Downloadable'])) : toBool_(payload.downloadable);
+  var rows = getDriveFiles_();
+  var row = {
+    Id: Utilities.getUuid(),
+    Kind: 'managed_file',
+    OriginalName: fileName,
+    DriveFileId: file.getId(),
+    DriveUrl: file.getUrl(),
+    ExamCode: '',
+    RegId: '',
+    Username: actor.Username,
+    MetaJson: JSON.stringify({
+      mimeType: mimeType,
+      sizeBytes: blob.getBytes().length,
+      downloadable: downloadable,
+      embedAllowed: true,
+      folderName: folder.getName(),
+      uploadedBy: actor.Username
+    }),
+    CreatedAt: nowIso_(),
+    IsDeleted: false,
+    DeletedAt: '',
+    DeletedBy: '',
+    RestoredAt: '',
+    RestoredBy: ''
+  };
+  rows.push(row);
+  saveDriveFiles_(rows);
+  return response_(true, 'File uploaded successfully.', managedFilePublicShape_(row));
+}
+
+function listManagedFiles_(payload) {
+  requireSession_(payload.token, ['admin']);
+  var q = normalize_(payload.search || '');
+  var rows = getDriveFiles_().filter(function(r){ return normalize_(r.Kind) === 'MANAGED_FILE'; }).filter(function(r){
+    if (!q) return true;
+    return normalize_(r.OriginalName).indexOf(q) !== -1 || normalize_(r.Username).indexOf(q) !== -1 || normalize_(r.MetaJson).indexOf(q) !== -1;
+  }).map(managedFilePublicShape_);
+  rows.sort(function(a,b){ return String(b.createdAt).localeCompare(String(a.createdAt)); });
+  return response_(true, 'Managed files loaded.', rows);
+}
+
+function updateManagedFileMeta_(fileId, updater) {
+  var rows = getDriveFiles_();
+  var found = null;
+  for (var i = 0; i < rows.length; i++) {
+    if (trim_(rows[i].Id) === trim_(fileId)) {
+      var meta = {};
+      try { meta = rows[i].MetaJson ? JSON.parse(rows[i].MetaJson) : {}; } catch (err) {}
+      updater(rows[i], meta);
+      rows[i].MetaJson = JSON.stringify(meta);
+      found = rows[i];
+      break;
+    }
+  }
+  if (!found) throw new Error('Managed file not found.');
+  saveDriveFiles_(rows);
+  return found;
+}
+
+function setManagedFileDownloadable_(payload) {
+  requireSession_(payload.token, ['principal_admin']);
+  var downloadable = toBool_(payload.downloadable);
+  var row = updateManagedFileMeta_(payload.id, function(r, meta){ meta.downloadable = downloadable; });
+  return response_(true, downloadable ? 'File download enabled.' : 'File download disabled.', managedFilePublicShape_(row));
+}
+
+function deleteManagedFile_(payload) {
+  var actor = requireSession_(payload.token, ['principal_admin']).user;
+  var row = updateManagedFileMeta_(payload.id, function(r, meta){ r.IsDeleted = true; r.DeletedAt = nowIso_(); r.DeletedBy = actor.Username; });
+  try { if (trim_(row.DriveFileId)) DriveApp.getFileById(trim_(row.DriveFileId)).setTrashed(true); } catch (err) {}
+  return response_(true, 'Managed file moved to trash.', managedFilePublicShape_(row));
+}
+
+function restoreManagedFile_(payload) {
+  var actor = requireSession_(payload.token, ['principal_admin']).user;
+  var row = updateManagedFileMeta_(payload.id, function(r, meta){ r.IsDeleted = false; r.RestoredAt = nowIso_(); r.RestoredBy = actor.Username; r.DeletedAt=''; r.DeletedBy=''; });
+  try { if (trim_(row.DriveFileId)) DriveApp.getFileById(trim_(row.DriveFileId)).setTrashed(false); } catch (err) {}
+  return response_(true, 'Managed file restored.', managedFilePublicShape_(row));
+}
+
+function hardDeleteManagedFile_(payload) {
+  requireSession_(payload.token, ['principal_admin']);
+  var rows = getDriveFiles_();
+  var kept = [];
+  var deleted = null;
+  for (var i = 0; i < rows.length; i++) {
+    if (trim_(rows[i].Id) === trim_(payload.id)) deleted = rows[i];
+    else kept.push(rows[i]);
+  }
+  if (!deleted) return response_(false, 'Managed file not found.');
+  try { if (trim_(deleted.DriveFileId)) DriveApp.getFileById(trim_(deleted.DriveFileId)).setTrashed(true); } catch (err) {}
+  saveDriveFiles_(kept);
+  return response_(true, 'Managed file permanently removed from the app index.');
+}
+
+function reimportDriveFiles_(payload) {
+  requireSession_(payload.token, ['principal_admin']);
+  var folder = getSubFolder_('Managed Uploads');
+  var files = folder.getFiles();
+  var existing = getDriveFiles_();
+  var known = {};
+  for (var i = 0; i < existing.length; i++) known[trim_(existing[i].DriveFileId)] = true;
+  var added = 0;
+  while (files.hasNext()) {
+    var file = files.next();
+    if (known[file.getId()]) continue;
+    existing.push({
+      Id: Utilities.getUuid(),
+      Kind: 'managed_file',
+      OriginalName: file.getName(),
+      DriveFileId: file.getId(),
+      DriveUrl: file.getUrl(),
+      ExamCode: '',
+      RegId: '',
+      Username: '',
+      MetaJson: JSON.stringify({ mimeType: file.getMimeType(), downloadable: true, embedAllowed: true, restoredFromDrive: true }),
+      CreatedAt: nowIso_(),
+      IsDeleted: false,
+      DeletedAt: '',
+      DeletedBy: '',
+      RestoredAt: '',
+      RestoredBy: ''
+    });
+    added++;
+  }
+  saveDriveFiles_(existing);
+  return response_(true, added ? ('Reimported ' + added + ' file(s) from Drive.') : 'No new Drive files were found to reimport.', { addedCount: added });
+}
+
+function refreshManagedFiles_(payload) {
+  requireSession_(payload.token, ['principal_admin']);
+  var refresh = reimportDriveFiles_(payload);
+  var rows = getDriveFiles_().filter(function(r){ return normalize_(r.Kind) === 'MANAGED_FILE'; }).map(managedFilePublicShape_);
+  rows.sort(function(a,b){ return String(b.createdAt).localeCompare(String(a.createdAt)); });
+  return response_(true, (refresh && refresh.message ? refresh.message + ' ' : '') + 'Managed files refreshed.', rows);
 }

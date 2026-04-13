@@ -46,26 +46,28 @@
   </div>
   <script src="site-common.js"></script>
   <script>
-  
-      (async function(){
-        const data = await getPublicSiteContent();
+      function applyAboutContent(data){
         setSiteFavicon(data.siteFaviconUrl || data.resultBrandLogoUrl);
         renderBrand(document.getElementById('brandMark'), data);
         document.getElementById('brandName').textContent = data.resultBrandName || 'Genz CBT Pro';
         document.getElementById('pageTitle').textContent = 'About';
-        
         document.getElementById('pageIntro').innerHTML = nl2br(data.siteAboutText || 'Add your about information in admin settings.');
         document.getElementById('ceoName').textContent = data.ceoName || 'CEO, Genz EduTech Innovations';
         document.getElementById('ceoTitle').textContent = data.ceoTitle || 'Founder & Chief Executive Officer';
         document.getElementById('ceoBio').innerHTML = nl2br(data.ceoBio || 'Add the CEO biography in admin settings.');
-        if(data.ceoImageUrl){ const img=document.getElementById('ceoPhoto'); img.src=data.ceoImageUrl; img.style.display='block'; }
+        const img=document.getElementById('ceoPhoto');
+        if(data.ceoImageUrl){ bindPublicImage(img, data.ceoImageUrl, 'eager'); } else if(img){ img.style.display='none'; }
         const grid = document.getElementById('contributorsGrid');
         const contributors = safeList(data.contributors, []);
         grid.innerHTML = contributors.length ? contributors.map(item => `<article class="card">${cardMedia(item,'Contributor')}<h3>${escHtml(item.name || 'Contributor')}</h3><div class="muted" style="margin-bottom:8px">${escHtml(item.role || '')}</div><p>${escHtml(item.bio || '')}</p></article>`).join('') : '<div class="card"><h3>No contributors added yet</h3><p>Add contributors JSON in the admin portal settings.</p></div>';
-        
         renderFooter(data);
+      }
+      (async function(){
+        const cached = getCachedPublicSiteContent();
+        if(cached && Object.keys(cached).length) applyAboutContent(cached);
+        const data = await getPublicSiteContent({ preferFresh: !Object.keys(cached || {}).length, onFresh: (fresh, changed) => { if(changed) applyAboutContent(fresh); } });
+        applyAboutContent(data);
       })();
-    
   </script>
 </body>
 </html>

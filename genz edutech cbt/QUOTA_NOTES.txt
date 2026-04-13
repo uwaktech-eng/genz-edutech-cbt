@@ -1,0 +1,12 @@
+Backend quota-focused changes applied:
+- Added SubmissionQueue sheet for append-only submission journaling.
+- Autosave now updates/inserts a single Progress row instead of rewriting the whole Progress sheet.
+- Final submit now appends to Results and SubmissionQueue instead of rewriting the whole Results sheet.
+- Permission code usage on submit now updates only the matched row.
+- Progress row is cleared only for the current candidate after submit.
+- Drive/proctoring file logs now append one row instead of rewriting the whole DriveFiles sheet.
+- Result rankings are recalculated dynamically when results are viewed/checkered, so submit stays lighter.
+- Student autosave interval increased to 30s and skips duplicate saves.
+- Screen-recording upload segment length increased from 30s to 60s to reduce upload calls.
+
+UI/layout were intentionally left unchanged.

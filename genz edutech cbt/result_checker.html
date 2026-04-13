@@ -94,7 +94,10 @@ button.light{background:#fff;color:#0f172a;border:1px solid #cbd5e1;box-shadow:n
 .result-sub{margin-top:6px;opacity:.95;line-height:1.6}
 .result-meta-badges{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
 .result-meta-badges .pill{padding:9px 12px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);font-size:12px;font-weight:800}
-.result-body{padding:24px 24px 26px;background:linear-gradient(180deg,var(--theme-body,#fff), #ffffff)}
+.result-body{padding:24px 24px 26px;background:
+  radial-gradient(circle at top right, rgba(59,130,246,.12), transparent 28%),
+  radial-gradient(circle at bottom left, rgba(14,165,233,.12), transparent 30%),
+  linear-gradient(180deg, var(--theme-body,#f8fbff) 0%, #ffffff 42%, #f6fbff 100%)}
 .summary-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:-38px 0 18px;position:relative;z-index:2}
 .summary-card{background:#fff;border:1.5px solid var(--theme-card-border,#dbe4f3);box-shadow:0 14px 26px rgba(15,23,42,.08);border-radius:18px;padding:15px}
 .summary-card .k{font-size:12px;text-transform:uppercase;letter-spacing:.35px;color:#64748b;font-weight:800}
@@ -147,7 +150,7 @@ button.light{background:#fff;color:#0f172a;border:1px solid #cbd5e1;box-shadow:n
 .empty{padding:20px;text-align:center;color:#64748b;border:1px dashed #cbd5e1;border-radius:16px;background:#f8fbff}
 @media (max-width:1080px){.layout{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.summary-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.sheet-grid{grid-template-columns:1fr}.identity-band{grid-template-columns:1fr}.result-content-grid{grid-template-columns:1fr}.passport-card{max-width:220px}.student-pill-stack{justify-content:flex-start}}
 @media (max-width:720px){.container{padding:0 12px 28px}.hero-title{font-size:1.55rem}.hero-panel,.hero-side,.card{padding:16px}.summary-strip{grid-template-columns:1fr}.result-header{padding:22px 18px}.result-body{padding:16px}.brand-logo-shell,.brand-logo,.brand-logo-fallback{width:68px;height:68px;border-radius:18px}.result-header h2{font-size:1.18rem}.table-wrap table{min-width:620px}.actions{flex-direction:column}.actions>*{width:100%}.sheet-grid{gap:12px}.result-table th,.result-table td{padding:10px 8px;font-size:13px}.student-banner{padding:12px}.student-pill-stack{justify-content:flex-start}.passport-card{max-width:none}.passport-card img,.passport-frame{min-height:180px;height:180px}}
-@page{size:A4;margin:12mm;} @media print{html,body,#resultBox,#resultBox *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;forced-color-adjust:none !important}body{background:#fff}header,.hero,aside.card,.results-head,.results-toolbar,.table-wrap,#reviewWrap{display:none !important}.container{max-width:none;margin:0;padding:0}.layout{display:block}.results-card{box-shadow:none;border:none;background:#fff}.results-body{padding:0}#resultCard{display:block !important}#resultBox .template-shell{box-shadow:none;border:1.5px solid var(--theme-border,#cbd5e1) !important;border-radius:0;background:var(--theme-paper,#fff) !important}#resultBox .result-header{background:var(--theme-header,linear-gradient(135deg,#1d4ed8,#4338ca 60%, #0ea5e9)) !important;color:#fff !important}#resultBox .result-body{background:linear-gradient(180deg,var(--theme-body,#fff),#ffffff) !important}#resultBox .summary-card{background:#fff !important;border-color:var(--theme-card-border,#dbe4f3) !important}#resultBox .panel{background:var(--theme-panel,#fff) !important;border-color:var(--theme-panel-border,#cbd5e1) !important}#resultBox .remark-box{background:var(--theme-remark,#eff6ff) !important;border-color:var(--theme-card-border,#cbd5e1) !important}#resultBox .result-table th{background:var(--theme-table-head,#e2e8f0) !important;color:var(--theme-table-head-text,#0f172a) !important;border-color:var(--theme-table-line,#64748b) !important}#resultBox .result-table td{background:var(--theme-table-body,#fff) !important;border-color:var(--theme-table-line,#64748b) !important}}
+@page{size:A4;margin:12mm;} @media print{html,body,#resultBox,#resultBox *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;forced-color-adjust:none !important}body{background:#fff}header,.hero,aside.card,.results-head,.results-toolbar,.table-wrap,#reviewWrap{display:none !important}.container{max-width:none;margin:0;padding:0}.layout{display:block}.results-card{box-shadow:none;border:none;background:#fff}.results-body{padding:0}#resultCard{display:block !important}#resultBox .template-shell{box-shadow:none;border:1.5px solid var(--theme-border,#cbd5e1) !important;border-radius:0;background:var(--theme-paper,#fff) !important}#resultBox .result-header{background:var(--theme-header,linear-gradient(135deg,#1d4ed8,#4338ca 60%, #0ea5e9)) !important;color:#fff !important}#resultBox .result-body{background:radial-gradient(circle at top right, rgba(59,130,246,.12), transparent 28%), radial-gradient(circle at bottom left, rgba(14,165,233,.12), transparent 30%), linear-gradient(180deg,var(--theme-body,#f8fbff),#ffffff 42%,#f6fbff) !important}#resultBox .summary-card{background:#fff !important;border-color:var(--theme-card-border,#dbe4f3) !important}#resultBox .panel{background:var(--theme-panel,#fff) !important;border-color:var(--theme-panel-border,#cbd5e1) !important}#resultBox .remark-box{background:var(--theme-remark,#eff6ff) !important;border-color:var(--theme-card-border,#cbd5e1) !important}#resultBox .result-table th{background:var(--theme-table-head,#e2e8f0) !important;color:var(--theme-table-head-text,#0f172a) !important;border-color:var(--theme-table-line,#64748b) !important}#resultBox .result-table td{background:var(--theme-table-body,#fff) !important;border-color:var(--theme-table-line,#64748b) !important}}
 </style>
 </head>
 <body>
@@ -607,19 +610,114 @@ function rerenderCurrentResult(){
   bindResultMedia($('resultBox'), state.currentResult);
   renderReview(state.currentResult.allowReview ? (state.currentResult.review || []) : []);
 }
-async function fetchImageDataUrl(url){
-  url = normalizeImageUrl(url);
-  if(!url) return '';
+function detectImageFormatFromDataUrl(dataUrl){
+  const m = String(dataUrl || '').match(/^data:image\/(png|jpeg|jpg|webp|gif);/i);
+  const fmt = m && m[1] ? m[1].toUpperCase() : 'PNG';
+  return fmt === 'JPG' ? 'JPEG' : fmt;
+}
+async function blobToDataUrl(blob){
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function fetchImageDataUrlFromBackend(url){
+  const raw = String(url || '').trim();
+  if(!raw || !APPS_SCRIPT_URL) return '';
   try{
-    const res = await fetch(url, { mode:'cors' });
-    const blob = await res.blob();
-    return await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
+    const res = await apiRequest('getImageDataUrl', { url: raw }, 'GET');
+    if(res && res.ok && res.data && res.data.dataUrl) return String(res.data.dataUrl || '');
+  }catch(err){}
+  return '';
+}
+
+async function fetchCandidateAsDataUrl(candidate){
+  if(!candidate) return '';
+  try{
+    const res = await fetch(candidate, { mode:'cors', credentials:'omit', cache:'no-store' });
+    if(res.ok){
+      const blob = await res.blob();
+      if(blob && /^image\//i.test(blob.type || '')) return await blobToDataUrl(blob);
+    }
+  }catch(err){}
+  try{
+    return await new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.referrerPolicy = 'no-referrer';
+      img.onload = function(){
+        try{
+          const canvas = document.createElement('canvas');
+          canvas.width = this.naturalWidth || this.width || 1;
+          canvas.height = this.naturalHeight || this.height || 1;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(this, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        }catch(err){ resolve(''); }
+      };
+      img.onerror = () => resolve('');
+      img.src = candidate + (candidate.includes('?') ? '&' : '?') + '_imgts=' + Date.now();
     });
   }catch(err){ return ''; }
+}
+async function fetchImageDataUrl(url){
+  const raw = String(url || '').trim();
+  if(!raw) return '';
+  const backendDataUrl = await fetchImageDataUrlFromBackend(raw);
+  if(backendDataUrl) return backendDataUrl;
+  const candidates = publicImageCandidates(raw);
+  for(const candidate of candidates){
+    const dataUrl = await fetchCandidateAsDataUrl(candidate);
+    if(dataUrl) return dataUrl;
+  }
+  return '';
+}
+async function normalizePdfImageDataUrl(dataUrl, preferredType='image/jpeg', quality=0.92){
+  const raw = String(dataUrl || '').trim();
+  if(!raw) return '';
+  if(/^data:image\/jpeg;/i.test(raw) || /^data:image\/jpg;/i.test(raw)) return raw;
+  try{
+    return await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = function(){
+        try{
+          const width = Math.max(1, this.naturalWidth || this.width || 1);
+          const height = Math.max(1, this.naturalHeight || this.height || 1);
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(this, 0, 0, width, height);
+          const clean = canvas.toDataURL(preferredType, quality);
+          resolve(String(clean || raw));
+        }catch(err){ resolve(raw); }
+      };
+      img.onerror = () => resolve(raw);
+      img.src = raw;
+    });
+  }catch(err){ return raw; }
+}
+async function preparePdfImage(url){
+  const raw = await fetchImageDataUrl(url);
+  if(!raw) return '';
+  return await normalizePdfImageDataUrl(raw);
+}
+function addPdfImage(doc, dataUrl, x, y, w, h){
+  if(!doc || !dataUrl) return false;
+  try{
+    doc.addImage(dataUrl, detectImageFormatFromDataUrl(dataUrl), x, y, w, h);
+    return true;
+  }catch(err){
+    try{
+      doc.addImage(dataUrl, 'PNG', x, y, w, h);
+      return true;
+    }catch(err2){ return false; }
+  }
 }
 function buildPdfRowsForResult(data){
   const rows = [
@@ -646,14 +744,13 @@ async function downloadResultPdf(){
   const theme = getTemplateTheme();
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation:'portrait', unit:'pt', format:'a4' });
-  const [logoData, passportData, signatureData] = await Promise.all([
-    fetchImageDataUrl(data.brandLogoUrl || ''),
-    fetchImageDataUrl(data.passportUrl || ''),
-    fetchImageDataUrl(data.signatureUrl || '')
+  const [logoData, signatureData] = await Promise.all([
+    preparePdfImage(data.brandLogoUrl || ''),
+    preparePdfImage(data.signatureUrl || '')
   ]);
   doc.setFillColor(theme.tableHeadText === '#0f172a' ? 15 : 29, theme.tableHeadText === '#0f172a' ? 23 : 78, theme.tableHeadText === '#0f172a' ? 42 : 216);
   doc.rect(0,0,595,128,'F');
-  if(logoData){ try{ doc.addImage(logoData, 'PNG', 38, 24, 58, 58); }catch(err){} }
+  if(logoData) addPdfImage(doc, logoData, 38, 24, 58, 58);
   doc.setTextColor(255,255,255);
   doc.setFont('helvetica','bold');
   doc.setFontSize(20);
@@ -663,7 +760,6 @@ async function downloadResultPdf(){
   doc.text(`Official Student Result Slip — ${theme.name}`, 108, 66);
   doc.text(`Exam: ${data.examTitle || ''} (${data.examCode || ''})`, 108, 84);
   doc.text(`Status: ${data.passedStatus || ''}`, 108, 102);
-  if(passportData){ try{ doc.addImage(passportData, 'PNG', 487, 146, 72, 84); }catch(err){} }
   doc.setTextColor(15,23,42);
   doc.autoTable({
     startY: 148,
@@ -680,7 +776,7 @@ async function downloadResultPdf(){
   const lines = doc.splitTextToSize(data.statusMessage || '', 515);
   doc.text(lines, 40, y + 16);
   if(signatureData){
-    try{ doc.addImage(signatureData, 'PNG', 385, 700, 160, 50); }catch(err){}
+    addPdfImage(doc, signatureData, 385, 700, 160, 50);
     doc.setFontSize(9);
     doc.text('Authorized Signature', 430, 765);
   }
@@ -724,12 +820,12 @@ async function downloadSelectedReportCardPdf(){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation:'portrait', unit:'pt', format:'a4' });
   const [logoData, signatureData] = await Promise.all([
-    fetchImageDataUrl(first.brandLogoUrl || ''),
-    fetchImageDataUrl(first.signatureUrl || '')
+    preparePdfImage(first.brandLogoUrl || ''),
+    preparePdfImage(first.signatureUrl || '')
   ]);
   doc.setFillColor(theme.tableHeadText === '#0f172a' ? 15 : 29, theme.tableHeadText === '#0f172a' ? 23 : 78, theme.tableHeadText === '#0f172a' ? 42 : 216);
   doc.rect(0,0,595,118,'F');
-  if(logoData){ try{ doc.addImage(logoData, 'PNG', 38, 22, 56, 56); }catch(err){} }
+  if(logoData) addPdfImage(doc, logoData, 38, 22, 56, 56);
   doc.setTextColor(255,255,255);
   doc.setFont('helvetica','bold');
   doc.setFontSize(19);
@@ -768,7 +864,7 @@ async function downloadSelectedReportCardPdf(){
     ]
   });
   if(signatureData){
-    try{ doc.addImage(signatureData, 'PNG', 385, 720, 160, 50); }catch(err){}
+    addPdfImage(doc, signatureData, 385, 720, 160, 50);
     doc.setFontSize(9);
     doc.text('Authorized Signature', 430, 785);
   }
